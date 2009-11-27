@@ -78,32 +78,7 @@ class JFOResolutorPhase : public phase
 
    protected:
       /**
-         Method tha implements operatimultiObjectiveSolution* JFOResolutorPhase::getAttractorFromInBoxUsingDistances(agent* currentAgent)
-{
-   // We'll loop over the mailbox looking for a solution to mix our current one with.
-   double closestDistance = 0;
-   double newDistance = INFd;
-   this->attractor = NULL;
-
-   JFOAgent* superFrog = static_cast<JFOAgent*>(currentAgent->getCore());
-   multiObjectiveSolution* ai = NULL;
-   multiObjectiveSolution* xi = superFrog->getCurrentSolution();
-
-   for (size_t i = 0; i < currentAgent->getInBox().size(); i++)
-   {
-      ai = boost::any_cast<multiObjectiveSolution*> ((currentAgent->getInBox())[i][1].getObject());
-      newDistance = sqrt(   pow(xi->getObjective(3) - ai->getObjective(3), 2) + 
-                            pow(xi->getObjective(5) - ai->getObjective(5), 2) + 
-                            pow(xi->getObjective(6) - ai->getObjective(6), 2));
-      if (newDistance > closestDistance)
-      {
-         closestDistance = newDistance;
-         this->attractor = ai;
-      }
-   } 
-   std::cout << "Min Dist: " << closestDistance << std::endl;
-   return this->attractor;
-}ons related to initialization.
+         Method tha implements operations related to initialization.
       */
       void prePhase(agent*, std::vector<agent*>*);
 
@@ -129,9 +104,6 @@ class JFOResolutorPhase : public phase
          the attractor.
       */
       multiObjectiveSolution* getAttractorFromInBox(agent*);
-      multiObjectiveSolution* getAttractorFromInBoxUsingDistancesClosest(agent*);
-      multiObjectiveSolution* getAttractorFromInBoxUsingDistancesFurther(agent*);
-      multiObjectiveSolution* getAttractorFromInBoxUsingWindowViolation(agent*);
 
    public:
       /**
@@ -208,102 +180,17 @@ multiObjectiveSolution* JFOResolutorPhase::getAttractorFromInBox(agent* currentA
    return this->attractor;
 }
 
-multiObjectiveSolution* JFOResolutorPhase::getAttractorFromInBoxUsingWindowViolation(agent* currentAgent)
-{
-   // We'll loop over the mailbox looking for a solution to mix our current one with.
-   double closestDistance = INFd;
-   double newDistance = INFd;
-   this->attractor = NULL;
-   double randomNumber = 0.0;
-   codeaParameters* neuralItem = codeaParameters::instance();
-
-   JFOAgent* superFrog = static_cast<JFOAgent*>(currentAgent->getCore());
-   multiObjectiveSolution* ai = NULL;
-   multiObjectiveSolution* xi = superFrog->getCurrentSolution();
-
-   for (size_t i = 0; i < currentAgent->getInBox().size(); i++)
-   {
-      randomNumber = neuralItem->getRandomNumber()->rand();
-      ai = boost::any_cast<multiObjectiveSolution*> ((currentAgent->getInBox())[i][1].getObject());
-      newDistance = ai->getObjective(5);
-      //std::cout << "r: " << randomNumber << " newDistance: " << newDistance << std::endl;
-      if (((newDistance < closestDistance) && (xi->getObjective(5) > 10)) || 
-          ((newDistance < closestDistance) && (randomNumber < 0.90)))
-      {
-         closestDistance = newDistance;
-         this->attractor = ai;
-      }
-   } 
-   std::cout << "Violations: " << closestDistance << std::endl;
-   //std::cin.get();
-   return this->attractor;
-}
-
-
-multiObjectiveSolution* JFOResolutorPhase::getAttractorFromInBoxUsingDistancesFurther(agent* currentAgent)
-{
-   // We'll loop over the mailbox looking for a solution to mix our current one with.
-   double closestDistance = 0;
-   double newDistance = INFd;
-   this->attractor = NULL;
-
-   JFOAgent* superFrog = static_cast<JFOAgent*>(currentAgent->getCore());
-   multiObjectiveSolution* ai = NULL;
-   multiObjectiveSolution* xi = superFrog->getCurrentSolution();
-
-   for (size_t i = 0; i < currentAgent->getInBox().size(); i++)
-   {
-      ai = boost::any_cast<multiObjectiveSolution*> ((currentAgent->getInBox())[i][1].getObject());
-      newDistance = sqrt(   pow(xi->getObjective(3) - ai->getObjective(3), 2) + 
-                            pow(xi->getObjective(5) - ai->getObjective(5), 2) + 
-                            pow(xi->getObjective(6) - ai->getObjective(6), 2));
-      if (newDistance > closestDistance)
-      {
-         closestDistance = newDistance;
-         this->attractor = ai;
-      }
-   } 
-   std::cout << "Min Dist: " << closestDistance << std::endl;
-   return this->attractor;
-}
-
-multiObjectiveSolution* JFOResolutorPhase::getAttractorFromInBoxUsingDistancesClosest(agent* currentAgent)
-{
-   // We'll loop over the mailbox looking for a solution to mix our current one with.
-   double closestDistance = INFd;
-   double newDistance = INFd;
-   this->attractor = NULL;
-
-   JFOAgent* superFrog = static_cast<JFOAgent*>(currentAgent->getCore());
-   multiObjectiveSolution* ai = NULL;
-   multiObjectiveSolution* xi = superFrog->getCurrentSolution();
-
-   for (size_t i = 0; i < currentAgent->getInBox().size(); i++)
-   {
-      ai = boost::any_cast<multiObjectiveSolution*> ((currentAgent->getInBox())[i][1].getObject());
-      newDistance = sqrt(   pow(xi->getObjective(3) - ai->getObjective(3), 2) + 
-                            pow(xi->getObjective(5) - ai->getObjective(5), 2) + 
-                            pow(xi->getObjective(6) - ai->getObjective(6), 2));
-      if (newDistance < closestDistance)
-      {
-         closestDistance = newDistance;
-         this->attractor = ai;
-      }
-   } 
-   std::cout << "Min Dist: " << closestDistance << std::endl;
-   return this->attractor;
-}
-
 void JFOResolutorPhase::core(agent* currentAgent, std::vector<agent*>* team)
 {
    JFOAgent* superFrog = static_cast<JFOAgent*>(currentAgent->getCore());
+
+   // Update of the weights of the swarm
+   superFrog->updateParameters(this->numberOfIterations);
 
    codeaParameters* neuralItem = codeaParameters::instance();
    MTRand ranGenerator;
    double randomNumber = -1.0;
 
-   // Update of the weights of the swarm
-   // superFrog->updateParameters(numberOfIterations);
 
    // Current Position
    multiObjectiveSolution* xi = superFrog->getCurrentSolution();
@@ -344,8 +231,7 @@ void JFOResolutorPhase::core(agent* currentAgent, std::vector<agent*>* team)
    }
    else if (isInside(randomNumber, *c1, *c1 + *c2)) // cognitive
    {
-      gi = JFOResolutorPhase::getAttractorFromInBoxUsingWindowViolation(currentAgent);
-
+      gi = JFOResolutorPhase::getAttractorFromInBox(currentAgent);
       if (gi != NULL && gi != bi)
       {
          superFrog->cognitiveMovement(xi, gi, ni);
@@ -392,23 +278,14 @@ void JFOResolutorPhase::core(agent* currentAgent, std::vector<agent*>* team)
    superFrog->localSearchMethod(ni, target);
    superFrog->getProblem()->evaluate(ni);
 
-   if (currentAgent->getId() == 0)
-   {
-    //  std::cout << "c1: " << *(superFrog->getPointerToC1()) << " c2: " << *(superFrog->getPointerToC2()) << " c3: " << *(superFrog->getPointerToC3()) << " c4: " << *(superFrog->getPointerToC4()) << " it: " << this->numberOfIterations << std::endl;
-      //std::cin.get();
-   }
    // Update of solutions
    if (MOP->firstSolutionIsBetter(ni, bi).isNullTrue())
    {
       movementScore[movementType] += 1;
-
-
-
       superFrog->setBestOwnSolution(ni);
       this->ownScore++;
-
       
-      if (MOP->firstSolutionIsBetter(ni, g, "<global>").isTrue())
+      if (MOP->firstSolutionIsBetter(ni, g, "<global>").isNullTrue())
       {
          this->ownScore++;
          superFrog->updateBestSolution(ni);
@@ -418,14 +295,13 @@ void JFOResolutorPhase::core(agent* currentAgent, std::vector<agent*>* team)
          // std::cout << "Score: " << movementScore << std::endl;
          // std::cout << "Tries: " << movementTry << std::endl;
          std::cout << g->toString() << std::endl;
-         if (g->getObjective(5) == 0 && g->getObjective(6) == 0)
-            std::cin.get();
+
          // Let's force CODEA to find the optimum
-         // if (g->getObjective(5) == 0 && g->getObjective(6) == 0)
-         //{
-           // std::cout << "Itaration: " << this->numberOfIterations << std::endl;
-           // exit(0);
-         //}
+         if (g->getObjective(5) == 0 && g->getObjective(6) == 0)
+         {
+            std::cout << "Itaration: " << this->numberOfIterations << std::endl;
+            exit(0);
+         }
       }
    }
 

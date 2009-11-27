@@ -115,6 +115,14 @@ class VRPSolution : public multiObjectiveSolution
       */
       const routesType& getRoutes() const;
 
+
+      /**
+         Method that returns the route-plan this solution has.
+         @returns the route-plan.
+      */
+      routesType& getModificableRoutes();
+
+
       /**
          Method that returns the a pointer to the routes-plan.
          @return a pointer to the route-plan.
@@ -219,6 +227,11 @@ inline void VRPSolution::setRoutes(const routesType& routes)
 }
 
 inline const routesType& VRPSolution::getRoutes() const
+{
+   return this->routes;
+}
+
+inline routesType& VRPSolution::getModificableRoutes()
 {
    return this->routes;
 }

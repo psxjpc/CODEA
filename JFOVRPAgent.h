@@ -147,11 +147,11 @@ inline void JFOVRPAgent::inertialMovement(multiObjectiveSolution* ci,
    codeaParameters* neuralItem = codeaParameters::instance();
    routesType offSpringRoutes;
    if (neuralItem->getRandomNumber()->rand() > 0.5)
-      offSpringRoutes = closerNode((static_cast<VRPSolution*>(ci))->getRoutes(), options);
+      selfCloserNode((static_cast<VRPSolution*>(ci))->getModificableRoutes(), options);
    else
-      offSpringRoutes = lambdaOneInterchange((static_cast<VRPSolution*>(ci))->getRoutes(), options);
+      selfLambdaOneInterchange((static_cast<VRPSolution*>(ci))->getModificableRoutes(), options);
  
-   (static_cast<VRPSolution*>(ni))->setRoutes(offSpringRoutes);
+   (static_cast<VRPSolution*>(ni))->setRoutes((static_cast<VRPSolution*>(ci))->getRoutes());
 }
 
 inline void JFOVRPAgent::cognitiveMovement(multiObjectiveSolution* ci, 
@@ -159,10 +159,10 @@ inline void JFOVRPAgent::cognitiveMovement(multiObjectiveSolution* ci,
                                            multiObjectiveSolution* ni,
                                            const string options)
 {
-   const routesType& follower = (static_cast<VRPSolution*>(ci))->getRoutes();
-   const routesType& attractor = (static_cast<VRPSolution*>(ai))->getRoutes();
-   routesType offSpringRoutes = twitter(follower, attractor, options);
-   (static_cast<VRPSolution*>(ni))->setRoutes(offSpringRoutes);
+   selfTwitter((static_cast<VRPSolution*>(ci))->getModificableRoutes(),
+               (static_cast<VRPSolution*>(ai))->getRoutes());
+
+   (static_cast<VRPSolution*>(ni))->setRoutes((static_cast<VRPSolution*>(ci))->getRoutes());
 }
 
 inline void JFOVRPAgent::localMovement(multiObjectiveSolution* ci, 
@@ -170,10 +170,10 @@ inline void JFOVRPAgent::localMovement(multiObjectiveSolution* ci,
                                        multiObjectiveSolution* ni,
                                        const string options)
 {
-   routesType offSpringRoutes = twitter((static_cast<VRPSolution*>(ci))->getRoutes(),
-                                     (static_cast<VRPSolution*>(ai))->getRoutes());
+   selfTwitter((static_cast<VRPSolution*>(ci))->getModificableRoutes(),
+               (static_cast<VRPSolution*>(ai))->getRoutes());
 
-   (static_cast<VRPSolution*>(ni))->setRoutes(offSpringRoutes);
+   (static_cast<VRPSolution*>(ni))->setRoutes((static_cast<VRPSolution*>(ci))->getRoutes());
 }
 
 inline void JFOVRPAgent::socialMovement(multiObjectiveSolution* ci, 
@@ -184,14 +184,14 @@ inline void JFOVRPAgent::socialMovement(multiObjectiveSolution* ci,
    routesType offSpringRoutes = twitter((static_cast<VRPSolution*>(ci))->getRoutes(),
                                      (static_cast<VRPSolution*>(ai))->getRoutes());
 
-   (static_cast<VRPSolution*>(ni))->setRoutes(offSpringRoutes);
+   (static_cast<VRPSolution*>(ni))->setRoutes((static_cast<VRPSolution*>(ci))->getRoutes());
 }
 
 inline void JFOVRPAgent::localSearchMethod(multiObjectiveSolution* ci, const string options)
 { 
-   routesType offSpringRoutes = localSearch((static_cast<VRPSolution*>(ci))->getRoutes(), options);
+   selfLocalSearch((static_cast<VRPSolution*>(ci))->getModificableRoutes(), options);
 
-   (static_cast<VRPSolution*>(ci))->setRoutes(offSpringRoutes);
+   (static_cast<VRPSolution*>(ci))->setRoutes((static_cast<VRPSolution*>(ci))->getRoutes());
 }
 
 bool JFOVRPAgent::isAValidMovement()

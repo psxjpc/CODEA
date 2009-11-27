@@ -112,11 +112,8 @@ int main( int argc, char **argv )
    cout << "Starting up..." << endl;
 
    // Seed
-   //srand(time(NULL));
-   //MTRand randomNumber(time(NULL));
-
-   srand(0);
-   MTRand randomNumber(1);
+   srand(time(NULL));
+   MTRand randomNumber(time(NULL));
 
    // Get data from files
    readSolomonDataFile(argv[1]);
@@ -125,7 +122,7 @@ int main( int argc, char **argv )
    VRPTWData->calculateDistanceMatrix();
 
    // Creation of the agents  
-   unsigned numberOfAgents = 25;
+   unsigned numberOfAgents = 50;
    deque<message> inBox;
    vector<agent*> frogAgents;
 
@@ -165,7 +162,7 @@ int main( int argc, char **argv )
 
       // By default they are set to false [Global]
       vehiclesProblem->setIsGlobalComparable(true);
-      distancesProblem->setIsGlobalComparable(true);
+      //distancesProblem->setIsGlobalComparable(true);
       vehicleCapacityProblem->setIsGlobalComparable(true);
       timeWindownProblem->setIsGlobalComparable(true);
       //waitingProblem->setIsGlobalComparable(true);

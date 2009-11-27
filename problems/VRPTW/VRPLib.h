@@ -32,7 +32,6 @@
 #include "./objectives/timeWindowViolationProblem.h"
 #include "./objectives/timeWindownViolationProblem.h"
 #include "./objectives/vehicleCapacitynViolationsProblem.h"
-#include "./objectives/vehicleCapacityViolationProblem.h"
 
 typedef unsigned A;
 typedef std::vector<A> chromosomeType;
@@ -45,6 +44,27 @@ inline unsigned rootGene(const chromosomeType& chromosome, unsigned gene)
 
    cout << "VRPLib::selectARandomGene() is returning an unexpected value! - forcing exit" << endl;
    exit(1);
+}
+
+inline void selfLambdaOneInterchange(chromosomeType& parent, const string target = " ")
+{
+   codeaParameters* neuralItem = codeaParameters::instance();
+
+   unsigned numberOfChanges = neuralItem->getRandomNumber()->randInt(parent.size() / 2);
+   unsigned x, y;
+
+   for (unsigned times = 0; times < numberOfChanges; times++)
+   {
+      do
+      {
+         x = neuralItem->getRandomNumber()->randInt(parent.size() - 2);
+         y = neuralItem->getRandomNumber()->randInt(parent.size() - 2);
+
+      }
+      while (x == y || parent[x] == 0 || parent[y] == 0 || rootGene(parent, x) == rootGene(parent, y));
+      basic::swap(parent, x, y);
+   }
+
 }
 
 inline chromosomeType lambdaOneInterchange(const chromosomeType& parent, const string target = " ")
@@ -186,19 +206,24 @@ chromosomeType MType0(const chromosomeType& parent, const chromosomeType& attrac
    return offspring;
 }
 
+inline void selfMType0(chromosomeType& parent, const chromosomeType& attractor, const string target = " ")
+{ 
+   unsigned elementPositionInParent = selectAnElement(parent);   
+   unsigned elementPositionInAttractor = findElement(attractor, parent[elementPositionInParent]);
+   unsigned elementPositionToExchange = findElement(parent, attractor[elementPositionInAttractor - 1]);
+   basic::move<A>(parent, elementPositionToExchange, elementPositionInParent);
+}
+
 chromosomeType localSearch(const chromosomeType& parent, const string target = "")
 {
    codeaParameters* neuralItem = codeaParameters::instance();
 
    timeWindownViolationProblem twvp;
    distanceProblem dp;
-   vehicleCapacityViolationProblem cp;
    double bestScore = INFd;
    double score = INFd;
    double bestScoreTW = INFd;
    double scoreTW = INFd;
-   double bestScoreCP = INFd;
-   double scoreCP = INFd;
    chromosomeType bestOffspring;
    chromosomeType offspring = parent;
    bool improvement = true;
@@ -213,28 +238,13 @@ chromosomeType localSearch(const chromosomeType& parent, const string target = "
             basic::swap(offspring, i, i + distance);
             scoreTW = twvp.evaluate(offspring);
             score = dp.evaluate(offspring);
-            if (bestScore >= score && bestScoreTW > scoreTW) 
-               
+            if (bestScore >= score && bestScoreTW > scoreTW)
             {
                bestOffspring = offspring;
                bestScore = score;
                bestScoreTW = scoreTW;
                improvement = true;
             }
-            // New Code to overcome capacity problems
-            if (bestScoreTW == 0)
-            {
-               scoreCP = cp.evaluate(offspring);
-               if (bestScoreCP > scoreCP)
-               {
-                  bestOffspring = offspring;
-                  bestScore = score;
-                  bestScoreTW = scoreTW;
-                  bestScoreCP = scoreCP;
-                  improvement = true;
-               }
-            }
-            // <- if finishes the new code.
             if (improvement && greedy)
                break;
             basic::swap(offspring, i, i + distance);
@@ -246,6 +256,75 @@ chromosomeType localSearch(const chromosomeType& parent, const string target = "
    }
    return bestOffspring;
 }
+
+
+inline void selfLocalSearch(chromosomeType& parent, const string target = "")
+{
+   codeaParameters* neuralItem = codeaParameters::instance();
+
+   timeWindownViolationProblem twvp;
+   distanceProblem dp;
+   double bestScore = INFd;
+   double score = INFd;
+   double bestScoreTW = INFd;
+   double scoreTW = INFd;
+   chromosomeType bestOffspring;
+
+   bool improvement = true;
+   bool greedy = true;
+   while (improvement)
+   {
+      improvement = false;
+      for (size_t distance = 1; distance < (parent.size() - 1); distance++)
+      {
+         for (size_t i = 1; i < (parent.size() - distance - 1); i++)
+         {
+            basic::swap(parent, i, i + distance);
+            scoreTW = twvp.evaluate(parent);
+            score = dp.evaluate(parent);
+            if (bestScore >= score && bestScoreTW > scoreTW)
+            {
+               bestOffspring = parent;
+               bestScore = score;
+               bestScoreTW = scoreTW;
+               improvement = true;
+            }
+            if (improvement && greedy)
+               break;
+            basic::swap(parent, i, i + distance);
+         }
+         if (improvement && greedy)
+            break;
+      }
+      parent = bestOffspring;
+   }
+
+}
+
+inline void selfCloserNode(chromosomeType& parent, const string target = " ")
+{
+   VRPTWDataProblem* VRPTWData = VRPTWDataProblem::instance();
+
+   double bestScore = INFd;
+   double score = INFd;
+   int index = -1;
+
+   unsigned node = selectAnElement(parent);
+   for (size_t i = 1; i < parent.size() - 3; i++)
+      if (i != node) 
+      {
+         score = VRPTWData->getDistanceMatrix()[parent[node]][parent[i]];
+         if (score < bestScore)
+         {
+            bestScore = score;
+            index = i;
+         }
+      }
+
+   basic::move<A>(parent, index, node);
+
+}
+
 
 chromosomeType closerNode(const chromosomeType& parent, const string target = " ")
 {
@@ -313,5 +392,36 @@ chromosomeType twitter(const chromosomeType& follower, const chromosomeType& att
    return localSearch(next);
 }
 
+inline void selfTwitter(chromosomeType& follower, const chromosomeType& attractor, const string target = " ")
+{
+   // get a random sub-route
+   codeaParameters* neuralItem = codeaParameters::instance();
+
+   if (neuralItem->getRandomNumber()->rand() < 0.60)
+   {
+      selfMType0(follower, attractor, target);
+      return;
+   }
+
+   unsigned scr = rootGene(attractor, neuralItem->getRandomNumber()->randInt(attractor.size() - 2));
+
+   while (attractor[scr + 1] == 0)
+      scr = rootGene(attractor, neuralItem->getRandomNumber()->randInt(attractor.size() - 2));
+
+   chromosomeType::iterator result = adjacent_find(follower.begin(), follower.end());
+   if (result != follower.end())
+      follower.erase(result);
+   else
+      follower.erase(find(follower.begin() + 1, follower.end() - 1, 0));
+
+   for (size_t i = scr + 1; attractor[i] != 0; i++)
+      follower.erase(find(follower.begin() + 1, follower.end() - 1, attractor[i]));
+
+   for (size_t i = scr + 1; attractor[i] != 0; i++)
+      follower.push_back(attractor[i]);
+   follower.push_back(0);
+
+   selfLocalSearch(follower);
+}
 
 #endif

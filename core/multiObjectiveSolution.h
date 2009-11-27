@@ -108,12 +108,6 @@ class multiObjectiveSolution
       bool operator==(const multiObjectiveSolution* const) const;
 
       /**
-         Operator that returns 
-      */
-      T operator[](unsigned i) const
-      {     assert(this->objectives.size() > i);
-            return this->objectives[i];              }
-      /**
          Method that turns the numerical values contained in the data-structure this object work
          with to a std::string. This has been designed to output the information of the attributes
          of this object.
