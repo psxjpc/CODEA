@@ -17,8 +17,8 @@
    @author Group of Intelligent Computing - Universidad de La Laguna - 2008
 */
 
-#ifndef MULTIOBJECTIVESOLUTION_H
-#define MULTIOBJECTIVESOLUTION_H
+#ifndef MULTI_OBJECTIVESOLUTION_H
+#define MULTI_OBJECTIVESOLUTION_H
 
 #include <iostream>
 #include <string>
@@ -54,7 +54,7 @@ class multiObjectiveSolution
          Default destructor. It does nothing.
       */
       ~multiObjectiveSolution() { };
-
+      
       /**
          Method that given a position in the vector of objectives returns its value.
          @param const unsigned is the position we want the value of.
@@ -115,6 +115,9 @@ class multiObjectiveSolution
       */
       const std::string objectivesToString() const;
 
+
+      void copyObjectives(multiObjectiveSolution* const) const;
+
       /**
          Virtual method that is intended to provide access from this class to the output
          of inherited classes. This it's not necessary to access inner classes using 'casts'
@@ -129,6 +132,14 @@ class multiObjectiveSolution
          @param const multiObjectiveSolution* is the object we want to copy from.
       */
       virtual void copy(const multiObjectiveSolution* const) = 0;
+
+      /**
+         Virtual method that forces to implement the copy of inner data-structures in 
+         inherited classes. This acts as the copy-constructor.
+         @param const multiObjectiveSolution* is the object we want to copy from.
+      */
+      virtual multiObjectiveSolution* clone() = 0;
+
 };
 
 inline const std::string multiObjectiveSolution::objectivesToString() const
@@ -175,6 +186,12 @@ inline const bool multiObjectiveSolution::isEmpty() const
 {
    return (this->objectives.size() == 0);
 }
+
+inline void multiObjectiveSolution::copyObjectives(multiObjectiveSolution* const object) const
+{
+   object->setObjectives(this->objectives);
+}
+
 
 inline bool multiObjectiveSolution::operator==(const multiObjectiveSolution* const object) const
 {

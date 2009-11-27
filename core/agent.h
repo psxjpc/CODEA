@@ -70,7 +70,8 @@ class agent
       /**
          Agent's delivery message. It contains the information the information the agent will
             be sharing (sending) in the communication phase.
-      */      message msg;
+      */
+      message msg;
 
    protected:
 
@@ -190,7 +191,7 @@ class agent
       */
       void setPhases(const vector<phase*>);
 
-      /** 
+      /**
          Method that sets the agent's message to be delivered.
          @param agent's message.
       */
@@ -199,17 +200,16 @@ class agent
 
 agent::agent()
 { 
+   deque<message> mailbox;
    this->active = true;
    this->id = 0;
    this->neighborhoodList = NULL;
    this->agentCore = NULL;
+   setInBox(mailbox);
 }
 
 agent::~agent() 
-{
-   delete(this->agentCore);
-   delete(this->neighborhoodList);
-}
+{ }
 
 agent::agent(const idAgentType id, core *agentCore, 
              const deque<message> inBox, neighborhood *neighborhoodList, 

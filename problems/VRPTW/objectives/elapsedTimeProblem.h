@@ -6,9 +6,8 @@
    @author Group of Intelligent Computing - Universidad de La Laguna - 2008
 */
 
-
-#ifndef ELAPSEDTIMEPROBLEM_H
-#define ELAPSEDTIMEPROBLEM_H
+#ifndef ELAPSEDTIMEPROBLEM_H_
+#define ELAPSEDTIMEPROBLEM_H_
 
 #include "../VRPSolution.h"
 #include "../../../core/header.h"
@@ -147,7 +146,8 @@ inline T elapsedTimeProblem::evaluate(const routesType& routes)
       }
       elapsedTimeBetweenTwoCostumers(routeElapsedTime, routes[i], routes[i + 1]);
    }
-   totalElapsedTime += routeElapsedTime;
+   totalElapsedTime += routeElapsedTime;
+
    return totalElapsedTime;
 }
 

@@ -73,6 +73,9 @@ class VRPSolution : public multiObjectiveSolution
       */
       VRPSolution(const routesType&);
 
+
+      VRPSolution(const multiObjectiveSolution* const);
+
       /**
          Default destructor. It does nothing.
       */
@@ -115,19 +118,13 @@ class VRPSolution : public multiObjectiveSolution
       */
       const routesType& getRoutes() const;
 
-
-      /**
-         Method that returns the route-plan this solution has.
-         @returns the route-plan.
-      */
-      routesType& getModificableRoutes();
-
-
+      routesType& getModificableRoutes()
+      {   return this->routes;   }
       /**
          Method that returns the a pointer to the routes-plan.
          @return a pointer to the route-plan.
       */     
-      const routesType* getPointerToRoutes() const;
+      routesType* getPointerToRoutes() const;
  
       /**
          Method that returns the number of vehicles this solution
@@ -161,11 +158,28 @@ class VRPSolution : public multiObjectiveSolution
          @return a std::string with the solution data.
       */
       const std::string toString() const;
+
+      multiObjectiveSolution* clone();
 };
 
 VRPSolution::VRPSolution(const routesType& routes)
 {
    this->routes = routes;
+}
+
+multiObjectiveSolution* VRPSolution::clone()
+{
+   return new VRPSolution(this);
+}
+
+VRPSolution::VRPSolution(const multiObjectiveSolution* const newSolution)
+{
+   // Routes
+   const VRPSolution* const newVRPSolution = static_cast<const VRPSolution* const>(newSolution);
+   this->routes = newVRPSolution->getRoutes();
+
+   // The objectives of the mother class
+   setObjectives(newSolution->getObjectives());
 }
 
 VRPSolution::VRPSolution(const unsigned& numberOfCostumers)
@@ -231,14 +245,9 @@ inline const routesType& VRPSolution::getRoutes() const
    return this->routes;
 }
 
-inline routesType& VRPSolution::getModificableRoutes()
-{
-   return this->routes;
-}
-
-inline const routesType* VRPSolution::getPointerToRoutes() const
+inline routesType* VRPSolution::getPointerToRoutes() const
 { 
-   return &(this->routes); 
+   return const_cast<routesType*>(&this->routes); 
 }
 
 std::ostream& operator<<(std::ostream& os, const VRPSolution& object)
@@ -251,34 +260,22 @@ std::ostream& operator<<(std::ostream& os, const VRPSolution& object)
    os << "Route: ";
    for (size_t i = 0; i < object.getRoutes().size(); i++)
       os << object.getRoutes()[i] << " ";
-   os << std::endl;
+   os << std::endl; 
 
    return os;
 }
 
 const std::string VRPSolution::toString() const
 {
-/* // General Purposes
-   string outputString = "Objectives: ";
+   string outputString = "";
    for (size_t i = 0; i < getObjectives().size(); i++)
       outputString += somethingToString<T>(getObjective(i)) + " ";
-   outputString += "\n";
+ /*  outputString += "\n";
    outputString += "Route: ";
    for (size_t i = 0; i < getRoutes().size(); i++)
       outputString += somethingToString<T>(getRoutes()[i]) + " ";
    outputString += "\n";
 */
-
-   // Statistical Purposes
-   string outputString = "";
-   for (size_t i = 0; i < getObjectives().size(); i++)
-      outputString += somethingToString<T>(getObjective(i)) + " ";
-   //outputString += "\n";
-   outputString += "| ";
-   for (size_t i = 0; i < getRoutes().size(); i++)
-      outputString += somethingToString<T>(getRoutes()[i]) + " ";
-   outputString += "\n";
-
    return outputString;
 }
 

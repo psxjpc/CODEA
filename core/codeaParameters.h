@@ -16,6 +16,9 @@
 
 #include "../misc/MersenneTwister.h"
 
+// This is for the atexit function
+#include <cstdlib>
+
 class codeaParameters
 {
    private:
@@ -36,6 +39,8 @@ class codeaParameters
       */
       MTRand* randomNumber;
 
+      multiObjectiveSolution* genericSolution;
+
 
    protected:
       
@@ -43,7 +48,8 @@ class codeaParameters
           Default constructor. It does nothing.
           It's protected due to its Singleto nature.
       */
-      codeaParameters() { };
+      codeaParameters() 
+      { genericSolution = NULL; };
 
       /**
           Default destructor. It does nothing.
@@ -72,11 +78,15 @@ class codeaParameters
       */
       MTRand* getRandomNumber() const;
 
+      multiObjectiveSolution* getGenericSolution() const;
+
       /**
           Method that sets the randon number generator.
           @param MTRand* is a pointer to the random number generator.
       */
       void setRandomNumber(MTRand*);
+
+      void setGenericSolution(multiObjectiveSolution*);
 
 
 };
@@ -94,7 +104,7 @@ codeaParameters* codeaParameters::instance()
    if (codeaParametersInstance == NULL)
    {
       codeaParametersInstance = new codeaParameters;
-      std::atexit(&codeaParameters::destroySingleton);
+      atexit(&codeaParameters::destroySingleton);
    }
    return codeaParametersInstance;
 }
@@ -104,9 +114,21 @@ MTRand* codeaParameters::getRandomNumber() const
    return this->randomNumber;
 }
 
+multiObjectiveSolution* codeaParameters::getGenericSolution() const
+{
+   return this->genericSolution;
+}
+
 void codeaParameters::setRandomNumber(MTRand* randomNumber)
 {
    this->randomNumber = randomNumber;
 }
 
+void codeaParameters::setGenericSolution(multiObjectiveSolution* genericSolution)
+{
+   if (this->genericSolution == NULL)
+      this->genericSolution = genericSolution;
+   else
+      this->genericSolution->copy(genericSolution);
+}
 #endif

@@ -47,16 +47,33 @@
 #include "JFOVRPAgent.h"
 
 // Phases
-#include "./agents/JFO/JFOphases/JFOCommunicationPhase.h"
-#include "./agents/JFO/JFOphases/JFOResolutorPhase.h"
+#include "./agents/JFOAgent/JFOphases/JFOCommunicationPhase.h"
+#include "./agents/JFOAgent/JFOphases/JFOResolutorPhase.h"
 
+// Extra 
+#include "./misc/file.h"
+#include "./misc/chrono.h"
 
 using namespace std;
 
+void readTimeMatrix(const char* fileName)
+{
+    VRPTWDataProblem* VRPTWData = VRPTWDataProblem::instance();
+    file<long> fileIn(fileName);
+    VRPTWData->setTimeMatrix(fileIn.getMatrix());
+}
+
+void readDistanceMatrix(const char* fileName)
+{
+    VRPTWDataProblem* VRPTWData = VRPTWDataProblem::instance();
+    file<double> fileIn(fileName);
+    VRPTWData->setDistanceMatrix(fileIn.getMatrix());
+}
+
 void readSolomonDataFile(const char* fileName)
 {
-   std::fstream file;
-   file.open(fileName);
+   std::fstream fileIn;
+   fileIn.open(fileName);
    std::string line;
    unsigned numberOfLine = 1;
    std::vector<string> splittedLine;
@@ -65,7 +82,7 @@ void readSolomonDataFile(const char* fileName)
 
    // Solomon's benchmark problems have the same format. So this algorithm extract
    //   its data and stores it into an VRPTW->class data structure. 
-   while (getline(file, line))
+   while (getline(fileIn, line))
    {
      if (numberOfLine == 5)
      {
@@ -97,19 +114,21 @@ void readSolomonDataFile(const char* fileName)
 
 int main( int argc, char **argv )
 {
-   cout << "CODEA - MOJFO 4 VRPTW" << endl;
-   cout << "---------------------" << endl;
+   // cout << "CODEA - MOJFO 4 VRPTW" << endl;
+   // cout << "---------------------" << endl;
 
-   if (argc < 3)
+   if (argc < 4)
    {
       cout << "ERROR[!]" << endl;
       cout << "You must provide:" << endl;
       cout << "  - a filename with the data of the problem." << endl;
       cout << "  - the number of vehicles you want to work with." << endl;
-      cout << "Example ./CODEA2 data.txt 10" << endl;
+      cout << "  - type of topology (0) Star (1) Ring (2) K-random" << endl;
+      cout << "Example ./CODEA2 data.txt 10 2" << endl;
       exit(1);
    }
-   cout << "Starting up..." << endl;
+   assert(atoi(argv[3]) >= 0 && atoi(argv[3]) < 4);
+   // cout << "Starting up..." << endl;
 
    // Seed
    srand(time(NULL));
@@ -120,6 +139,7 @@ int main( int argc, char **argv )
    unsigned numberOfVehicles = atoi(argv[2]);
    VRPTWDataProblem* VRPTWData = VRPTWDataProblem::instance();
    VRPTWData->calculateDistanceMatrix();
+   VRPTWData->setDistanceMatrix(VRPTWData->getDistanceMatrix());
 
    // Creation of the agents  
    unsigned numberOfAgents = 50;
@@ -128,6 +148,8 @@ int main( int argc, char **argv )
 
    // All the agents will point to the best social solution
    multiObjectiveSolution* bestMOSolution = new VRPSolution(VRPTWData->getClientCoords().size());
+
+
    codeaParameters* neuralItem = codeaParameters::instance();  
    neuralItem->setRandomNumber(&randomNumber);
 
@@ -162,7 +184,7 @@ int main( int argc, char **argv )
 
       // By default they are set to false [Global]
       vehiclesProblem->setIsGlobalComparable(true);
-      //distancesProblem->setIsGlobalComparable(true);
+      distancesProblem->setIsGlobalComparable(true);
       vehicleCapacityProblem->setIsGlobalComparable(true);
       timeWindownProblem->setIsGlobalComparable(true);
       //waitingProblem->setIsGlobalComparable(true);
@@ -196,8 +218,9 @@ int main( int argc, char **argv )
       // Note: It's very important how we add the phases. Because they'll be
       //       executed in the same order.
       vector<phase*> phases;
-      phases.push_back(new JFOCommunicationPhase());
       phases.push_back(new JFOResolutorPhase(frog->getPointerToC1(), frog->getPointerToC2(), frog->getPointerToC3(), frog->getPointerToC4()));
+      phases.push_back(new JFOCommunicationPhase());
+      // phases.push_back(new JFOResolutorPhase(frog->getPointerToC1(), frog->getPointerToC2(), frog->getPointerToC3(), frog->getPointerToC4()));
       superFrog->setPhases(phases);
 
       // Addition of this agent to the system
@@ -205,12 +228,69 @@ int main( int argc, char **argv )
    }
 
    // Neighborhood
-   for (size_t i = 0; i < frogAgents.size(); i++)
-      frogAgents[i]->setNeighborhood(new staticNeighborhood(&frogAgents));
+
+   
+   if (atoi(argv[3]) == 0)
+   {
+      // Star topology (All to all topology)
+      for (size_t i = 0; i < frogAgents.size(); i++)
+         frogAgents[i]->setNeighborhood(new staticNeighborhood(&frogAgents));
+   }
+   else if (atoi(argv[3]) == 1)
+   {
+      // Ring topology (An agent Ai, sends its information to Ai-1 and Ai+1)
+      vector<agent*> neighbours;
+      for (size_t i = 0; i < frogAgents.size(); i++)
+      {
+         unsigned id1 = (int(i - 1) < 0)? frogAgents.size() - 1 : (i - 1);
+         unsigned id2 = (i + 1) > (frogAgents.size() - 1)? 0 : (i + 1);
+         neighbours.push_back(  (frogAgents[id1])  );
+         neighbours.push_back(  (frogAgents[id2])  );
+         frogAgents[i]->setNeighborhood(new staticNeighborhood(&neighbours));
+         neighbours.clear();
+      }
+   }
+   else if (atoi(argv[3]) == 2)
+   {
+      // K-random topology (An agent Ai, sends its information to k random agents
+      for (size_t j = 0; j < frogAgents.size(); j++)
+      {
+         unsigned k = 1 + neuralItem->getRandomNumber()->randInt(frogAgents.size() - 2);
+         vector<unsigned> ids;
+         unsigned candidate;
+         while (ids.size() < k)
+         {
+            candidate = neuralItem->getRandomNumber()->randInt(frogAgents.size() - 1);
+            if (find(ids.begin(), ids.end(), candidate) == ids.end())
+               ids.push_back(candidate);
+         }
+         cout << "Agent: " << j << "ids: " << ids << endl;
+         vector<agent*> neighbours;
+         for (size_t i = 0; i < k; i++)
+             neighbours.push_back(frogAgents[ids[i]]);
+
+         frogAgents[j]->setNeighborhood(new staticNeighborhood(&neighbours));
+      }
+   }
+   else if (atoi(argv[3]) == 3)
+      for (size_t i = 0; i < frogAgents.size(); i++)
+         frogAgents[i]->setNeighborhood(NULL);
+
+   // Here we will set the best solution of the whole swarm using stric pareto dominace
+   multiObjectiveSolution* genericSolution = new VRPSolution();
+   genericSolution->copy(frogAgents[0]->getCore()->getCurrentSolution());
+   const multiObjectiveProblem* const MOP = frogAgents[0]->getCore()->getProblem();
+
+   for (size_t i = 1; i < frogAgents.size(); i++)
+      if (MOP->firstSolutionIsBetter(frogAgents[i]->getCore()->getCurrentSolution(), genericSolution).isTrue())
+         genericSolution->copy(frogAgents[i]->getCore()->getCurrentSolution());
+
+   neuralItem->setGenericSolution(genericSolution);
+
 
    // Iterations of the system
    systemGeneralStopCriterion* haltCriterion = new systemGeneralStopCriterion();
-   haltCriterion->setMaxIteration(1000000); 
+   haltCriterion->setMaxIteration(5000);
 
 
    // Creation of the system
@@ -218,8 +298,11 @@ int main( int argc, char **argv )
    CODEA.setAgents(frogAgents);
    CODEA.setNumberOfPhases(2);
    CODEA.setStopCriterion(haltCriterion);
+
+   // Right before starting CODEA, we start the chrono
+   chrono* myChrono = chrono::instance();
    CODEA.start();  
-   cout << "End!" << endl;
+   // cout << "End!" << endl;
 
 
    return 0;

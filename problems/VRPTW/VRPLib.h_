@@ -1,0 +1,300 @@
+/** 
+   @library VRPLib
+  
+   @brief Provides a number of operators to work with routes.
+   
+   @author Group of Intelligent Computing - Universidad de La Laguna - 2008
+*/
+
+
+#ifndef VRPLIB_H
+#define VRPLIB_H
+
+#include <algorithm>
+#include <cmath>
+#include <vector>
+
+#include "dataTypes.h"
+#include "../../libs/funcLibrary.h"
+#include "../../libs/IOlibrary.h"
+#include "../../misc/MersenneTwister.h"
+#include "VRPTWDataProblem.h"
+
+#include "../../core/codeaParameters.h"
+#include "../../core/singleObjectiveProblem.h"
+
+#include "./objectives/elapsedTimeProblem.h"
+#include "./objectives/distanceProblem.h"
+
+// Objectives
+#include "./objectives/numberOfVehiclesProblem.h"
+#include "./objectives/distanceProblem.h"
+#include "./objectives/timeWindowViolationProblem.h"
+#include "./objectives/timeWindownViolationProblem.h"
+#include "./objectives/vehicleCapacitynViolationsProblem.h"
+
+typedef unsigned geneType;
+typedef std::vector<geneType> chromosomeType;
+
+inline unsigned rootGene(const chromosomeType& chromosome, unsigned gene)
+{
+   for (int i = gene; i >= 0; i--)
+      if (chromosome[i] == 0)
+         return i;
+
+   cout << "VRPLib::selectARandomGene() is returning an unexpected value! - forcing exit" << endl;
+   exit(1);
+}
+
+
+inline chromosomeType lambdaOneInterchange(const chromosomeType& parent, const string target = " ")
+{
+  // cout << "<lambda-i>" << endl;
+   chromosomeType offspring = parent;
+   codeaParameters* neuralItem = codeaParameters::instance();
+
+   unsigned numberOfChanges = neuralItem->getRandomNumber()->randInt(offspring.size() / 2);
+   unsigned x, y;
+   for (unsigned times = 0; times < numberOfChanges; times++)
+   {
+      do
+      {
+         x = neuralItem->getRandomNumber()->randInt(offspring.size() - 2);
+         y = neuralItem->getRandomNumber()->randInt(offspring.size() - 2);
+
+      }
+      while (x == y || parent[x] == 0 || parent[y] == 0 || rootGene(parent, x) == rootGene(parent, y));
+      basic::swap(offspring, x, y);
+   }
+   return offspring;
+}
+
+inline chromosomeType twoOpt(const chromosomeType& parent, const string target = " ")
+{
+   VRPTWDataProblem* VRPTWData = VRPTWDataProblem::instance();
+   chromosomeType offspring = parent;
+   chromosomeType bestOffspring;
+   T bestScoreA = INFd;
+   T scoreA = 0;
+   
+   elapsedTimeProblem elapsedProblem;
+
+   unsigned dist = 1;
+   unsigned numberOfLoops = 1;// + neuralItem->getRandomNumber()->randInt(offspring.size() / 2);
+   for (size_t k = 0; k < numberOfLoops; k++)
+      for (size_t i = 1; i + dist <= offspring.size() - 2; i++)
+      {
+         basic::swap(offspring, i, (i + dist));
+         scoreA = 0;
+
+         for (size_t j = 0; j < offspring.size() - 1; j++)
+            scoreA += VRPTWData->getDistanceMatrix()[offspring[j]][offspring[j + 1]];
+
+         if (scoreA < bestScoreA)
+         {
+            bestOffspring = offspring;
+            bestScoreA = scoreA;
+         }
+         basic::swap(offspring, i, (i + dist));
+      }
+
+   return bestOffspring;
+}
+
+inline unsigned findElement(const chromosomeType& parent, unsigned element)
+{
+   for (size_t i = 1; i < parent.size() - 1; i++)
+      if (parent[i] == element)
+         return i;
+   std::cout << "VRPLib.h::findElement(const chromosomeType& parent, unsigned element)" << std::endl;
+   std::cout << "Message: <element = " << element << "> not found" << std::endl;
+   exit(1);
+}
+
+inline unsigned selectAnElement(const chromosomeType& chromosome)
+{
+   codeaParameters* neuralItem = codeaParameters::instance();
+   int n = 0;
+
+   do n = neuralItem->getRandomNumber()->randInt(chromosome.size() - 3) + 1;
+   while (chromosome[n] == 0);
+
+   return n;
+}
+
+inline bool findElements(const chromosomeType& parent, unsigned start, unsigned length, unsigned element)
+{
+   for (size_t i = start; i < start + length; i++)
+      if (parent[i] == element)
+         return true;
+   return false;
+}
+
+// This will remove two consecutives zeros in the chromosome
+inline void cleanChromosome(chromosomeType& chromosome, unsigned counter = 0)
+{  
+   chromosomeType::iterator result;
+   result = adjacent_find( chromosome.begin(), chromosome.end());
+   while (result != chromosome.end())
+   {   
+      chromosome.erase(result);
+      result = adjacent_find( chromosome.begin(), chromosome.end());
+   }
+}
+
+
+inline void removeRandomGene(chromosomeType& chromosome, geneType g)
+{
+   codeaParameters* neuralItem = codeaParameters::instance();
+   unsigned pos = 1 + neuralItem->getRandomNumber()->randInt(chromosome.size() - 3);
+   
+   // Let's find the first occurrence of 'g' in the chromosome
+   chromosomeType::iterator it;
+   it = find(chromosome.begin() + pos, chromosome.end(), g);
+   while (it == (chromosome.end() - 1))
+   {
+       pos = 1 + neuralItem->getRandomNumber()->randInt(chromosome.size() - 3);
+       it = find(chromosome.begin() + pos, chromosome.end(), g);
+   }
+   chromosome.erase(it);    
+}
+
+// Debug purposes
+unsigned debugRoutesNumber(const chromosomeType& c)
+{
+   unsigned counter = 0;
+   for (size_t i = 0; i < c.size(); i++)
+       if (c[i] == 0)
+           counter++;
+   return (counter - 1);
+}
+
+void subRouteCopy(chromosomeType& follower, const chromosomeType& attractor, const string target = " ")
+{
+
+   // Get a random sub-route
+   codeaParameters* neuralItem = codeaParameters::instance();
+   unsigned scr = rootGene(attractor, neuralItem->getRandomNumber()->randInt(attractor.size() - 2));
+
+   // This prevents to have to zeros in a row
+   while (attractor[scr + 1] == 0)
+      scr = rootGene(attractor, neuralItem->getRandomNumber()->randInt(attractor.size() - 2));
+
+   // Let's delete the elements we're going to copy in the atractor
+   // Copy of the new elements
+   for (size_t i = scr + 1; attractor[i] != 0; i++)
+   {
+       follower.erase(find(follower.begin(), follower.end(), attractor[i]));
+       follower.push_back(attractor[i]);
+   }
+   follower.push_back(0);
+
+   removeRandomGene(follower, 0);
+}
+
+chromosomeType subRouteCopy(const chromosomeType& follower, const chromosomeType& attractor, const string target = " ")
+{
+   chromosomeType offspring = follower;
+   // Get a random sub-route
+   codeaParameters* neuralItem = codeaParameters::instance();
+   unsigned scr = rootGene(attractor, neuralItem->getRandomNumber()->randInt(attractor.size() - 2));
+
+   // This prevents to have two zeros in a row
+   while (attractor[scr + 1] == 0)
+      scr = rootGene(attractor, neuralItem->getRandomNumber()->randInt(attractor.size() - 2));
+
+   // Let's delete the elements we're going to copy in the atractor
+   // Copy of the new elements
+   for (size_t i = scr + 1; attractor[i] != 0; i++)
+   {
+       offspring.erase(find(offspring.begin(), offspring.end(), attractor[i]));
+       offspring.push_back(attractor[i]);
+   }
+   offspring.push_back(0);
+
+   // removeRandomGene(offspring, 0);
+   return offspring;
+}
+
+chromosomeType localSearchVN(const chromosomeType& parent, const string target = "")
+{
+   codeaParameters* neuralItem = codeaParameters::instance();
+
+   timeWindownViolationProblem twvp;
+   distanceProblem dp;
+   double bestScore = INFd;
+   double score = INFd;
+   double bestScoreTW = INFd;
+   double scoreTW = INFd;
+   chromosomeType bestOffspring;
+   chromosomeType offspring = parent;
+   bool improvement = true;
+   bool greedy = true;
+   while (improvement)
+   {
+      improvement = false;
+      for (size_t distance = 1; distance < (offspring.size() - 1); distance++)
+      {
+         for (size_t i = 1; i < (offspring.size() - distance - 1); i++)
+         {
+            basic::swap(offspring, i, i + distance);
+            scoreTW = twvp.evaluate(offspring);
+            score = dp.evaluate(offspring);
+            if (bestScore >= score && bestScoreTW > scoreTW)
+            {
+               bestOffspring = offspring;
+               bestScore = score;
+               bestScoreTW = scoreTW;
+               improvement = true;
+            }
+            if (improvement && greedy)
+               break;
+            basic::swap(offspring, i, i + distance);
+         }
+         if (improvement && greedy)
+            break;
+      }
+      offspring = bestOffspring;
+   }
+   return bestOffspring;
+}
+
+void MType0(chromosomeType& parent, const chromosomeType& attractor, const string target = " ")
+{
+   
+   unsigned elementPositionInParent = selectAnElement(parent);
+   unsigned elementPositionInAttractor = findElement(attractor, parent[elementPositionInParent]);
+   unsigned elementPositionToExchange = findElement(parent, attractor[elementPositionInAttractor - 1]);
+   basic::move<geneType>(parent, elementPositionToExchange, elementPositionInParent);
+
+}
+
+void twitter(chromosomeType& follower, const chromosomeType& attractor, const string target = " ")
+{
+   // get a random sub-route
+   codeaParameters* neuralItem = codeaParameters::instance();
+   unsigned scr = rootGene(attractor, neuralItem->getRandomNumber()->randInt(attractor.size() - 2));
+
+
+   while (attractor[scr + 1] == 0)
+      scr = rootGene(attractor, neuralItem->getRandomNumber()->randInt(attractor.size() - 2));
+
+   // removal of elements
+   chromosomeType::iterator result = adjacent_find(follower.begin(), follower.end());
+   if (result != follower.end())
+      follower.erase(result);
+   else
+      follower.erase(find(follower.begin() + 1, follower.end() - 1, 0));
+
+   for (size_t i = scr + 1; attractor[i] != 0; i++)
+      follower.erase(find(follower.begin() + 1, follower.end() - 1, attractor[i]));
+
+
+   // copy of the new elements
+   for (size_t i = scr + 1; attractor[i] != 0; i++)
+      follower.push_back(attractor[i]);
+   follower.push_back(0);
+
+}
+
+#endif

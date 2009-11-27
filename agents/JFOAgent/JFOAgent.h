@@ -1,0 +1,262 @@
+/** 
+   @class JFOAgent
+  
+   @brief Establishes the pattern to create JFO based agents.
+   
+   This class sets a number of virtual methods that mimics the 
+   behaviour of a Jumping Frog Optimization Agent. To find more
+   information about this, please refer to:
+
+   \code
+
+      \newblock F. Javier Martinez Garcia, Jose A. Moreno Perez.
+      \newblock Jumping Frogs Optimization: a new swarm method for discrete optimization.
+      \newblock {\em Documentos de Trabajo del DEIOC}. N. 3/2008, Universidad de La Laguna
+
+      \newblock Discrete Particle Swarm Optimization for the p-median problem
+      \newblock F.J. Martinez, Jose A. Moreno,
+      \newblock {\em MIC 2007, Metaheuristics International Conference} Montreal, Canada, 2007
+
+      \newblock Discrete Particle Swarm Optimization for the minimum labelling Steiner tree problem
+      \newblock Consoli S., Moreno-Perez J.A., Darby-Dowman K., Mladenovic N.
+      \newblock :{\em Nature Inspired Cooperative Strategies for Optimization (NICSO 2007)} 
+      \newblock Vol. 129, Studies in Computational Intelligence, pp. 313-322, 2007   
+
+   \endcode
+
+   @author Group of Intelligent Computing - Universidad de La Laguna - 2008
+*/
+
+#ifndef JFOAGENT_H
+#define JFOAGENT_H
+
+#include <string>
+
+#include "../../core/core.h"
+#include "../../core/header.h"
+#include "../../core/multiObjectiveSolution.h"
+#include "../../core/multiObjectiveProblem.h"
+
+#include "../../misc/MersenneTwister.h"
+
+typedef double JFOParameters;
+
+class JFOAgent : public core
+{
+   private:
+      /**
+         Likelihood indexes. This are the parameters of the JFO
+         uses to decide which move to trigger. The idea is to 
+         divide a segment in four sub-segments. Where c1 is the
+         amplitude of the first sub-segment, c2 the amplitude 
+         of the second one and so on. Plus, each sub-segment is
+         related to a type of move. c1 is related to the 
+         inertial move, c2 to the cognitive movement, c3 to
+         a local movement and c4 to a social movement.
+
+         In order to decide which move to perform, a JFO based 
+         agent generates a random number U[0,1]. Then, depending on
+         which sub-segment this value falls, a type of move
+         is selected.
+      */
+      JFOParameters c1, c2, c3, c4;
+
+      /**
+         Best solution this agent has achieved.
+      */
+      multiObjectiveSolution* bestOwnSolution;
+
+      /**
+         Best solution its neighborhood has achieved.
+      */
+      multiObjectiveSolution* bestSolutionOfGroup;
+
+   protected:
+
+   public:
+      /**
+         Default constructor. It initializes some parameters.
+      */
+      JFOAgent();
+      /**
+         Default destructor. It does nothing.
+      */
+      ~JFOAgent();
+
+      /**
+         Method that sets the best solution this agent has achieved.
+         @param multiObjectiveSolution* is a pointer to the new best solution.
+      */
+      void setBestOwnSolution(multiObjectiveSolution*);
+
+      void updateBestOwnSolution(multiObjectiveSolution*);
+
+      /**
+         Method that sets the best solution all the agents are pointing to.
+         @param multiObjectiveSolution* is a pointer to the new best solution.
+      */
+      void setBestSolutionOfGroup(multiObjectiveSolution*);
+
+      /**
+         Method that returns the best solution achieved by this agent.
+         @return a pointer to the best solution it has found.
+      */
+      multiObjectiveSolution* getBestOwnSolution() const;
+
+      /**
+         Method that returns the best solution found by the group.
+         @return a pointer to the best solution the group has found.
+      */
+      multiObjectiveSolution* getBestSolutionOfGroup() const;
+
+
+      void setCoefficients(JFOParameters c1, JFOParameters c2, JFOParameters c3, JFOParameters c4)
+      { this->c1 = c1; this->c2 = c2; this->c3 = c3; this->c4 = c4; };
+      /**
+         Method that returns the value amplitude of the first sub-segment.
+         @return a pointer to the value of c1.
+      */
+      JFOParameters* getPointerToC1()  { return &(this->c1); };
+
+      /**
+         Method that returns the value amplitude of the second sub-segment.
+         @return a pointer to the value of c2.
+      */
+      JFOParameters* getPointerToC2()  { return &(this->c2); };
+
+      /**
+         Method that returns the value amplitude of the third sub-segment.
+         @return a pointer to the value of c3.
+      */
+      JFOParameters* getPointerToC3()  { return &(this->c3); };
+
+      /**
+         Method that returns the value amplitude of the fourth sub-segment.
+         @return a pointer to the value of c4.
+      */
+      JFOParameters* getPointerToC4()  { return &(this->c4); };
+
+      /**
+         Method that initialize the value of the JFO parameters: c1, c2, c3, c4
+      */
+      void initializeParameters();
+
+      /**
+         Virtual method that is intended to implement the JFO's inertial move.
+         This movement doesn't require an attractor.
+         @param  multiObjectiveSolution* is a pointer to the current solution
+         @param  multiObjectiveSolution* is a pointer to the output solution
+         @param  const std::string options is a reserved string for parameters
+      */
+      virtual void inertialMovement( multiObjectiveSolution* currentSolution, 
+                                     multiObjectiveSolution* metaSolutionOut,
+                                     const std::string options = "") = 0;
+
+      /**
+         Virtual method that is intended to implement the JFO's cognitive move.
+         The attractor in this case should be the best solution in the neighborhood.
+         @param  multiObjectiveSolution* is a pointer to the solution that acts as the follower
+         @param  multiObjectiveSolution* is a pointer to the soluiton that asts as the attractor
+         @param  multiObjectiveSolution* is a pointer to the output solution
+         @param  const std::string options is a reserved string for parameters
+      */
+      virtual void cognitiveMovement(multiObjectiveSolution* currentSolution, 
+                                     multiObjectiveSolution* attractor,
+                                     multiObjectiveSolution* metaSolutionOut,
+                                     const std::string options = "") = 0;
+
+      /**
+         Virtual method that is intended to implement the JFO's local move.
+         The attractor in this case should be the best solution this agent has achieved.
+         @param  multiObjectiveSolution* is a pointer to the solution that acts as the follower
+         @param  multiObjectiveSolution* is a pointer to the soluiton that asts as the attractor
+         @param  multiObjectiveSolution* is a pointer to the output solutionid 	socialMoveme
+         @param  const std::string options is a reserved string for parameters
+      */
+      virtual void localMovement(multiObjectiveSolution* currentSolution, 
+                                     multiObjectiveSolution* attractor,
+                                     multiObjectiveSolution* metaSolutionOut,
+                                     const std::string options = "") = 0;
+      /**
+         Virtual method that is intended to implement the JFO's social move.
+         The attractor in this case should be the best solution achieve by the whole swarm.
+         @param  multiObjectiveSolution* is a pointer to the solution that acts as the follower
+         @param  multiObjectiveSolution* is a pointer to the soluiton that asts as the attractor
+         @param  multiObjectiveSolution* is a pointer to the output solution
+         @param  const std::string options is a reserved string for parameters
+      */
+      virtual void socialMovement(multiObjectiveSolution* currentSolution, 
+                                     multiObjectiveSolution* attractor,
+                                     multiObjectiveSolution* metaSolutionOut,
+                                     const std::string options = "") = 0;
+
+      /**
+         Virtual method that is intended to implement a local search as it is
+         specified in the JFO Algorithm.
+      */
+      virtual void localSearchMethod(multiObjectiveSolution* currentSolution,
+                                     const std::string options = "") = 0;
+
+      /**
+         Virtual method that is intended to accept or reject new solution or
+         output of movements. This is useful if you want agents to move only
+         on feasible areas.
+      */
+      virtual bool isAValidMovement() = 0;
+};
+
+JFOAgent::JFOAgent()
+{
+   setIteration(0);
+   setIterationOfBestSolution(0);
+   this->bestOwnSolution = NULL;
+   this->bestSolutionOfGroup = NULL;
+}
+
+JFOAgent::~JFOAgent()
+{
+
+}
+
+// Setters
+
+inline void JFOAgent::setBestOwnSolution(multiObjectiveSolution* newSolution)
+{
+   this->bestOwnSolution = newSolution;
+}
+
+inline void JFOAgent::setBestSolutionOfGroup(multiObjectiveSolution* newSolution)
+{
+   this->bestSolutionOfGroup = newSolution;
+}
+
+inline void JFOAgent::updateBestOwnSolution(multiObjectiveSolution* newSolution)
+{
+   assert(newSolution != NULL);
+   assert(this->bestOwnSolution != NULL);
+
+   this->bestOwnSolution->copy(newSolution);
+}
+
+
+// Getters
+
+inline multiObjectiveSolution* JFOAgent::getBestOwnSolution() const
+{
+   return this->bestOwnSolution;
+}
+
+inline multiObjectiveSolution* JFOAgent::getBestSolutionOfGroup() const
+{
+   return this->bestSolutionOfGroup;
+}
+
+inline void JFOAgent::initializeParameters()
+{
+   this->c1 = 0.40;
+   this->c2 = 0.20;
+   this->c3 = 0.20;
+   this->c4 = 0.20;
+}
+
+#endif

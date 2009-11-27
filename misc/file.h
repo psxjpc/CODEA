@@ -15,7 +15,6 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include "header.h"
 
 using std::string;
 using std::vector;
