@@ -7,6 +7,7 @@
 #include <QFont>
 #include <QtGui>
 #include <QVBoxLayout>
+#include <QTimer>
 
 #include "paintable.h"
 
@@ -29,6 +30,11 @@ paintable::paintable()
    this->view.scale(5, 5);
    this->view.centerOn(0.0, 0.0);
    this->view.setRenderHints(QPainter::Antialiasing);
+
+   timer = new QTimer(this);
+   connect(timer, SIGNAL(timeout()), this, SLOT(run()));
+   timer->start(1000);
+
 };
 
 paintable::~paintable() 

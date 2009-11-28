@@ -28,7 +28,7 @@
 #include "./core/multiObjectiveSolution.h"
 #include "./core/multiObjectiveProblem.h"
 
-#include "./agents/JFOAgent/JFOAgent.h"
+#include "./agents/JFO/JFOAgent.h"
 #include "./problems/VRPTW/VRPSolution.h"
 #include "./problems/VRPTW/VRPLib.h"
 

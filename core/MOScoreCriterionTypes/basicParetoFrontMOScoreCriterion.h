@@ -59,6 +59,12 @@ class basicParetoFrontMOScoreCriterion : public abstractMOScoreCriterion
                                     const multiObjectiveSolution*, 
                                     const problemsType&,
                                     const string options) const;
+
+
+      triBool firstSolutionIsBetter(const objectivesType&, 
+                                    const objectivesType&, 
+                                    const problemsType&,
+                                    std::string options = " ") const;
 }; 
 
 inline  triBool basicParetoFrontMOScoreCriterion::
@@ -110,6 +116,74 @@ inline  triBool basicParetoFrontMOScoreCriterion::
          else
          {
             if (firstMetaSolution->getObjective(i) < secondMetaSolution->getObjective(i))
+               firstSum++;
+            else
+               secondSum++;
+         }
+         comparableProblems++;
+      }
+      
+   }
+ 
+   if (firstSum == secondSum)
+       return triBool(null);
+
+ 
+   if (firstSum == comparableProblems)
+      return triBool(true);
+
+   if (secondSum == comparableProblems)
+      return triBool(false);
+
+   return triBool(null);
+}
+
+inline  triBool basicParetoFrontMOScoreCriterion::
+        firstSolutionIsBetter(const objectivesType& objectives1, 
+                              const objectivesType& objectives2, 
+                              const problemsType& problems,
+                              std::string options) const
+{
+   // Preconditions
+   assert(objectives1.size() == objectives2.size());
+
+   unsigned firstSum = 0;
+   unsigned secondSum = 0;
+
+   unsigned comparableProblems = 0;
+
+   for (size_t i = 0; i < objectives1.size(); i++)
+   {
+      if (options == "<global>")
+      {
+         if (problems[i]->isGlobalComparable())
+         {
+            if (objectives1[i] == objectives2[i])
+            { 
+               firstSum++;
+               secondSum++;
+            }
+            else
+            {
+               if (objectives1[i] < objectives2[i])
+                  firstSum++;
+               else
+                  secondSum++;
+            }
+            comparableProblems++;
+         }
+      }
+
+      else if (problems[i]->isComparable() || ((problems[i]->isGlobalComparable()) && (options == "<global>")))
+      {
+         if (objectives1[i] == objectives2[i])
+         { 
+            firstSum++;
+            secondSum++;
+         }
+         else
+         {
+            if (objectives1[i] < objectives2[i])
                firstSum++;
             else
                secondSum++;

@@ -56,6 +56,7 @@ class singleObjectiveProblem
       */
       bool globalComparable;
 
+      unsigned priority;
    protected:
      
 
@@ -71,6 +72,16 @@ class singleObjectiveProblem
       singleObjectiveProblem();
 
       /**
+         Constructor. It sets the fields of this class to default parameters.
+         \code
+            this->maxProblem = false;
+            this->comparable = false;
+            this->globalComparable = false;
+         \endcode
+      */
+      singleObjectiveProblem(const unsigned);
+
+      /**
          Default destructor. It does nothing.
       */
       ~singleObjectiveProblem();
@@ -80,6 +91,12 @@ class singleObjectiveProblem
          @return std::string that contains the name of this objective.
       */
       std::string getObjectiveName() const;
+
+      /**
+         Method that returns the priority of this problem
+         @return unsigned with the priority of the problem
+      */
+      unsigned getPriority() const;
 
       /**
          Method that returns true if this objective is to be maximized, false otherwise.
@@ -124,12 +141,26 @@ class singleObjectiveProblem
       */
       void setIsGlobalComparable(const bool); 
 
+
+      /**
+         Method that sets the priority of this objective (useful for lexicographic approachs)
+         @param const unsigned is the priority of the problem.
+      */
+      void setPriority(const unsigned); 
+
       /**
          Virtual method that is intended to evalute the objective given a solution and return a value.
          @param multiObjectiveSolution* is a pointer to the solution is going to be evaluated.
          @return the value of the evalua
       */
-      virtual T evaluate(multiObjectiveSolution*) = 0;
+      virtual T evaluate(multiObjectiveSolution*) const = 0;
+
+      /**
+         Virtual method that is intended to evalute the objective given a solution and return a value.
+         @param boost::any is a constant reference to a component of the solution is going to be evaluated.
+         @return the value of the evalua
+      */
+      virtual T evaluate(const boost::any&) const = 0;
 };
 
 singleObjectiveProblem::singleObjectiveProblem()
@@ -139,6 +170,16 @@ singleObjectiveProblem::singleObjectiveProblem()
    this->maxProblem = false;
    this->comparable = false;
    this->globalComparable = false;
+}
+
+singleObjectiveProblem::singleObjectiveProblem(const unsigned priority)
+{
+   // By default, we'll set up objectives as minimisation
+   //   problems and they won't be comparable.
+   this->maxProblem = false;
+   this->comparable = false;
+   this->globalComparable = false;
+   this->priority = priority;
 }
 
 singleObjectiveProblem::~singleObjectiveProblem()
@@ -166,6 +207,11 @@ inline bool singleObjectiveProblem::isGlobalComparable() const
    return this->globalComparable;
 }
 
+inline unsigned singleObjectiveProblem::getPriority() const
+{
+   return this->priority;
+}
+
 // Setters
 
 inline void singleObjectiveProblem::setObjectiveName(const std::string objectiveName)
@@ -186,6 +232,11 @@ inline void singleObjectiveProblem::setIsComparable(const bool comparable)
 inline void singleObjectiveProblem::setIsGlobalComparable(const bool globalComparable) 
 { 
    this->globalComparable = globalComparable; 
+}
+
+inline void singleObjectiveProblem::setPriority(const unsigned priority) 
+{ 
+   this->priority = priority; 
 }
 
 #endif

@@ -12,6 +12,13 @@
 #include <vector>
 #include <list>
 
+
+/**
+   These are used in the VRPLib.
+*/
+typedef unsigned A;
+typedef std::vector<A> chromosomeType;
+
 /**
    Type for the ID of the costumer.
 */
@@ -85,3 +92,8 @@ typedef std::vector<vehicleType> fleetType;
    Type for the demand.
 */
 typedef std::vector<singleDemandType> demandType;
+/**
+   Type for creating the zone/groups relationship
+*/
+typedef std::vector<vector<cityIDType> > costumerZoneType;
+

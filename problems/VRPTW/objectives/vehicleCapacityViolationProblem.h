@@ -40,7 +40,7 @@ class vehicleCapacityViolationProblem : public singleObjectiveProblem
          @return the value of the objective after the
          evaluation.
       */
-      T evaluate(multiObjectiveSolution*);
+      T evaluate(multiObjectiveSolution*) const;
 
       /**
          Method that return the evaluation of the given 
@@ -50,7 +50,9 @@ class vehicleCapacityViolationProblem : public singleObjectiveProblem
          @return the value of the objective after the
          evaluation.
       */
-      T evaluate(const routesType& routes);
+      T evaluate(const routesType& routes) const;
+
+      T evaluate(const boost::any&) const;
 };
 
 vehicleCapacityViolationProblem::vehicleCapacityViolationProblem()
@@ -59,7 +61,7 @@ vehicleCapacityViolationProblem::vehicleCapacityViolationProblem()
 vehicleCapacityViolationProblem::~vehicleCapacityViolationProblem()
 { }
 
-inline T vehicleCapacityViolationProblem::evaluate(multiObjectiveSolution* currentSolution)
+inline T vehicleCapacityViolationProblem::evaluate(multiObjectiveSolution* currentSolution) const
 {
    // std::cout << "vechileCapacitynViolationsProblem" << std::endl;
 
@@ -96,6 +98,38 @@ inline T vehicleCapacityViolationProblem::evaluate(multiObjectiveSolution* curre
    }
 
    return excededCapacity;
+}
+
+inline T vehicleCapacityViolationProblem::evaluate(const routesType& routes) const
+{
+
+   VRPTWDataProblem* VRPTWData = VRPTWDataProblem::instance();
+
+   T currentCapacity = 0;
+   T excededCapacity = 0;
+   unsigned numberOfViolations = 0;
+
+   for (size_t i = 1; i < routes.size(); i++)
+   {
+      if (routes[i] == 0)
+      { 
+         if (currentCapacity > VRPTWData->getFleet()[0].second)
+         {
+               excededCapacity += currentCapacity - VRPTWData->getFleet()[0].second;
+               numberOfViolations++;
+         }
+         currentCapacity = 0;
+      }
+      else 
+         currentCapacity += VRPTWData->getDemand()[routes[i]];
+   }
+
+   return excededCapacity;
+}
+
+T vehicleCapacityViolationProblem::evaluate(const boost::any& anyRoute) const
+{
+   return evaluate(boost::any_cast<const routesType&> (anyRoute));
 }
 
 #endif

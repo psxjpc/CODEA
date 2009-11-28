@@ -21,6 +21,9 @@
 #include "../../libs/conversions.h"
 #include "dataTypes.h"
 #include "../../libs/IOlibrary.h"
+#include "../../libs/funcLibrary.h"
+
+#define isIn(n, l, u) (n >= l && n <= u)
 
 class VRPTWDataProblem 
 {
@@ -65,6 +68,12 @@ class VRPTWDataProblem
          Vector that stores the amount of demand the clients require.
       */
       demandType demand; 
+
+      /**
+         Matrix that divides the costumers in zones
+      */
+      costumerZoneType costumerZone;
+      
 
    protected:
       /**
@@ -176,6 +185,12 @@ class VRPTWDataProblem
       const demandType& getDemand() const;
 
       /**
+         Method that returns the zone a costumer is depending on the time window it has
+         @return the zone according to the time window the costumer is in
+      */
+      const cityIDType getZone(cityIDType) const;
+
+      /**
          Method to add a new vehicle into the fleet.
          @param const vehicle& is the new vechile to be added.
       */
@@ -211,11 +226,20 @@ class VRPTWDataProblem
       */
       void calculateDistanceMatrix();
 
+  
+
+      /**
+          Method that classify costumers by their time window
+          @param unsigned is the number of vehicles we are going to use
+      */
+      void createZones(unsigned);
+
       /** 
          Method that prints the attributes of this objects.
          This is merely used to output all the data.
       */
       void print() const;
+
 };
  
 
@@ -334,6 +358,49 @@ inline void VRPTWDataProblem::calculateDistanceMatrix()
             distanceMatrix[j][i] = distanceMatrix[i][j];
          }
    }
+}
+
+inline const cityIDType VRPTWDataProblem::getZone(cityIDType id) const
+{
+   for (size_t i = 0; i < costumerZone.size(); i++)
+      for (size_t j = 0; j < costumerZone[i].size(); j++)   
+         if (costumerZone[i][j] == id)
+            return i;
+   std::cout << "Unexpected Error :: inline cityIdType VRPTWDataProblem::getZone(cityIdType id) :: file: VRPTWDataProblem.h" << std::endl;
+   exit(1);
+}
+
+
+inline void VRPTWDataProblem::createZones(unsigned numberOfRoutes)
+{
+   // The depot does not count
+   unsigned numberOfCostumers = clientCoords.size();
+   unsigned numberOfZones = numberOfCostumers / numberOfRoutes;
+   unsigned tMax = timeWindow[0].second;
+   unsigned zoneLength = tMax / numberOfZones;
+
+   costumerZone.resize(numberOfZones);
+   
+   for (size_t i = 0; i < numberOfZones; i++)
+      for (size_t j = 0; j < numberOfCostumers; j++)
+         if (isInside((timeWindow[j].first + timeWindow[j].second)/2, (long)(i * zoneLength), (long)((i+1) * zoneLength)))
+            costumerZone[i].push_back(j); 
+
+
+   // Printing - Just for testing
+   std::cout << "Number of costumers: " << numberOfCostumers << std::endl;
+   std::cout << "Number of Zones:     " << numberOfZones << std::endl;
+   std::cout << "tMax:                " << tMax << std::endl;
+   std::cout << "Zone Length:         " << zoneLength << std::endl;
+   std::cout << std::endl;
+   for (size_t i = 0; i < numberOfZones; i++)
+   {
+      std::cout << "Zone[" << i << "] (" << i * zoneLength << "," << (i+1) * zoneLength << ") => ";
+      for (size_t j = 0; j < costumerZone[i].size(); j++)   
+         std::cout << costumerZone[i][j] << "(" << (timeWindow[costumerZone[i][j]].first + timeWindow[costumerZone[i][j]].second)/2 << "), ";
+      std::cout << std::endl;
+   }
+      
 }
 
 inline void VRPTWDataProblem::print() const

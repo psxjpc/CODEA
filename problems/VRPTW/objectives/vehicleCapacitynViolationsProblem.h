@@ -40,7 +40,7 @@ class vehicleCapacitynViolationsProblem : public singleObjectiveProblem
          @return the value of the objective after the
          evaluation.
       */
-      T evaluate(multiObjectiveSolution*);
+      T evaluate(multiObjectiveSolution*) const;
 
       /**
          Method that return the evaluation of the given 
@@ -50,7 +50,9 @@ class vehicleCapacitynViolationsProblem : public singleObjectiveProblem
          @return the value of the objective after the
          evaluation.
       */
-      T evaluate(const routesType& routes);
+      T evaluate(const routesType& routes) const;
+
+      T evaluate(const boost::any&) const;
 };
 
 vehicleCapacitynViolationsProblem::vehicleCapacitynViolationsProblem()
@@ -59,7 +61,7 @@ vehicleCapacitynViolationsProblem::vehicleCapacitynViolationsProblem()
 vehicleCapacitynViolationsProblem::~vehicleCapacitynViolationsProblem()
 { }
 
-inline T vehicleCapacitynViolationsProblem::evaluate(multiObjectiveSolution* currentSolution)
+inline T vehicleCapacitynViolationsProblem::evaluate(multiObjectiveSolution* currentSolution) const
 {
    // std::cout << "vechileCapacitynViolationsProblem" << std::endl;
 
@@ -99,7 +101,7 @@ inline T vehicleCapacitynViolationsProblem::evaluate(multiObjectiveSolution* cur
 }
 
 
-inline T vehicleCapacitynViolationsProblem::evaluate(const routesType& routes)
+inline T vehicleCapacitynViolationsProblem::evaluate(const routesType& routes) const
 {   VRPTWDataProblem* VRPTWData = VRPTWDataProblem::instance();
 
    T currentCapacity = 0;
@@ -129,5 +131,9 @@ inline T vehicleCapacitynViolationsProblem::evaluate(const routesType& routes)
    return (T)numberOfViolations;
 }
 
+T vehicleCapacitynViolationsProblem::evaluate(const boost::any& anyRoute) const
+{
+   return evaluate(boost::any_cast<const routesType&> (anyRoute));
+}
 
 #endif

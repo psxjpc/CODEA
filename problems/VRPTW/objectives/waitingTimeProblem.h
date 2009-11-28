@@ -32,7 +32,7 @@ class waitingTimeProblem : public singleObjectiveProblem
          @param const unsgined is the id of the first costumer.
          @param const unsigned is the id of the second costumer. 
       */
-      void elapsedTimeBetweenTwoCostumers(T&, T&, const unsigned, const unsigned);
+      void elapsedTimeBetweenTwoCostumers(T&, T&, const unsigned, const unsigned) const;
 
    public:
       /**
@@ -53,7 +53,7 @@ class waitingTimeProblem : public singleObjectiveProblem
          @return the value of the objective after the
          evaluation.
       */
-      T evaluate(multiObjectiveSolution*);
+      T evaluate(multiObjectiveSolution*) const;
 
       /**
          Method that return the evaluation of the given 
@@ -63,7 +63,7 @@ class waitingTimeProblem : public singleObjectiveProblem
          @return the value of the objective after the
          evaluation.
       */
-      T evaluate(const routesType& routes);
+      T evaluate(const routesType& routes) const;
 
       /**
          Method that return the evaluation of the given 
@@ -77,7 +77,9 @@ class waitingTimeProblem : public singleObjectiveProblem
          @return the value of the objective after the
          evaluation.
       */
-      T evaluate(const routesType&, const unsigned, const unsigned);
+      T evaluate(const routesType&, const unsigned, const unsigned) const;
+
+      T evaluate(const boost::any&) const;
 
 };
 
@@ -87,7 +89,7 @@ waitingTimeProblem::waitingTimeProblem()
 waitingTimeProblem::~waitingTimeProblem()
 { }
 
-inline void waitingTimeProblem::elapsedTimeBetweenTwoCostumers(T& totalElapsedTime, T& waitingTime, const unsigned i, const unsigned j)
+inline void waitingTimeProblem::elapsedTimeBetweenTwoCostumers(T& totalElapsedTime, T& waitingTime, const unsigned i, const unsigned j) const
 {
    VRPTWDataProblem* VRPTWData = VRPTWDataProblem::instance();
 
@@ -107,7 +109,7 @@ inline void waitingTimeProblem::elapsedTimeBetweenTwoCostumers(T& totalElapsedTi
 }
 
 
-inline T waitingTimeProblem::evaluate(multiObjectiveSolution* currentSolution)
+inline T waitingTimeProblem::evaluate(multiObjectiveSolution* currentSolution) const
 {
    // std::cout << "tineWindowsViolationProblem" << std::endl;
 
@@ -135,5 +137,29 @@ inline T waitingTimeProblem::evaluate(multiObjectiveSolution* currentSolution)
    return waitingTime;
 }
 
+inline T waitingTimeProblem::evaluate(const routesType& routes) const
+{
+   T totalElapsedTime = 0;
+   T routeElapsedTime = 0;
+   T waitingTime = 0;
+
+   for (size_t i = 0; i < routes.size() - 1; i++)
+   {
+      if (routes[i] == 0)
+      {
+         totalElapsedTime += routeElapsedTime;
+         routeElapsedTime = 0;
+      }
+      elapsedTimeBetweenTwoCostumers(routeElapsedTime, waitingTime, routes[i], routes[i + 1]);
+   }
+   totalElapsedTime += routeElapsedTime;
+
+   return waitingTime;
+}
+
+T waitingTimeProblem::evaluate(const boost::any& anyRoute) const
+{
+   return evaluate(boost::any_cast<const routesType&> (anyRoute));
+}
 
 #endif

@@ -7,6 +7,7 @@
 
 // QT classes
 #include <QApplication>
+#include <QTimer>
 
 
 // VRPTW classes
@@ -68,30 +69,45 @@ routesType readSolution(const char* fileName)
    std::fstream file;
    file.open(fileName);
    unsigned costumer;
+   // This is to get rid of the objectives part of the solution
+   std::string dummy;
+   //for (unsigned i = 1; i < 10; i++)
+   //   file >> dummy;
    while (file >> costumer)
       routes.push_back(costumer);
+   file.close();
    return routes;
 }
 
 
 int main( int argc, char **argv )
 {
-    QApplication app(argc, argv);
+   QApplication app(argc, argv);
 
    if (argc < 2)
    {
       cout << "ERROR[!]" << endl;
-      cout << "You must provide a filename with the data of the problem." << endl;
-      cout << "Ex. CODEA2 data.txt" << endl;
+      cout << "(1) You must provide a filename with the data of the problem." << endl;
+      cout << "(2) You must provide a filename with the route to be displayed." << endl;
+      cout << "Ex. CODEA2 data.txt route.txt" << endl;
       exit(1);
    }
-   readSolomonDataFile(argv[1]);
-   VRPTWDataProblem* VRPTWData = VRPTWDataProblem::instance();
-   VRPTWData->calculateDistanceMatrix();
 
+
+   
    VRPSolDisplayer dis;
-   dis.setRoutes(readSolution(argv[2]);
-   dis.paint();
+   
 
+
+   
+      readSolomonDataFile(argv[1]);
+      VRPTWDataProblem* VRPTWData = VRPTWDataProblem::instance();
+      VRPTWData->calculateDistanceMatrix();
+
+  
+      dis.setRoutes(readSolution(argv[2]));
+      dis.paint();
+
+ //  }
    return app.exec();
 }

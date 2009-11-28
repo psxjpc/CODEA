@@ -56,7 +56,7 @@ class multiObjectiveProblem
          @return std::vector that contains pointers to singleObjectiveProblem from. 
          which the objective function classes inherit.
       */
-      problemsType getProblems() const { return problems; }
+      //problemsType getProblems() const { return problems; }
 
       /** 
          Method that sets the criteria it is going to be used to score the solutions.
@@ -94,6 +94,8 @@ class multiObjectiveProblem
          @param multiObjectiveSolution* is a pointer to the solution to be updated.
       */ 
       void evaluate(multiObjectiveSolution*) const;
+
+      const problemsType& getProblems() const;
 };
 
 
@@ -145,5 +147,11 @@ inline void multiObjectiveProblem::evaluate(multiObjectiveSolution* MOSolution) 
          (*objectives)[i] = this->problems[i]->evaluate(MOSolution); 
 
 }
+
+inline const problemsType& multiObjectiveProblem::getProblems() const
+{
+   return this->problems;
+}
+
 
 #endif

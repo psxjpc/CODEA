@@ -43,7 +43,7 @@ class distanceProblem : public singleObjectiveProblem
          @return the value of the objective after the
          evaluation.
       */
-      T evaluate(multiObjectiveSolution*);
+      T evaluate(multiObjectiveSolution*) const;
 
       /**
          Method that return the evaluation of the given 
@@ -53,7 +53,7 @@ class distanceProblem : public singleObjectiveProblem
          @return the value of the objective after the
          evaluation.
       */
-      T evaluate(const routesType& routes);
+      T evaluate(const routesType& routes) const;
 
       /**
          Method that return the evaluation of the given 
@@ -67,7 +67,9 @@ class distanceProblem : public singleObjectiveProblem
          @return the value of the objective after the
          evaluation.
       */
-      T evaluate(const routesType& routes, const unsigned start, const unsigned length);
+      T evaluate(const routesType& routes, const unsigned start, const unsigned length) const;
+
+      T evaluate(const boost::any&) const;
 };
 
 distanceProblem::distanceProblem()
@@ -76,7 +78,7 @@ distanceProblem::distanceProblem()
 distanceProblem::~distanceProblem()
 { }
 
-inline T distanceProblem::evaluate(multiObjectiveSolution* currentSolution)
+inline T distanceProblem::evaluate(multiObjectiveSolution* currentSolution) const
 {
    assert(currentSolution != NULL);
  
@@ -91,7 +93,7 @@ inline T distanceProblem::evaluate(multiObjectiveSolution* currentSolution)
    return totalDistance;
 }
 
-inline T distanceProblem::evaluate(const routesType& routes)
+inline T distanceProblem::evaluate(const routesType& routes) const
 {
    T totalDistance = 0;
    VRPTWDataProblem* VRPTWData = VRPTWDataProblem::instance();
@@ -101,7 +103,7 @@ inline T distanceProblem::evaluate(const routesType& routes)
    return totalDistance;
 }
 
-inline T distanceProblem::evaluate(const routesType& routes, const unsigned start, const unsigned length)
+inline T distanceProblem::evaluate(const routesType& routes, const unsigned start, const unsigned length) const
 {
    assert(start + length < routes.size());
    T totalDistance = 0;
@@ -110,6 +112,11 @@ inline T distanceProblem::evaluate(const routesType& routes, const unsigned star
       totalDistance += VRPTWData->getDistanceMatrix()[routes[i]][routes[i + 1]];
 
    return totalDistance;  
+}
+
+T distanceProblem::evaluate(const boost::any& anyRoute) const
+{
+   return evaluate(boost::any_cast<const routesType&> (anyRoute));
 }
 
 #endif

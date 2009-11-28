@@ -26,8 +26,13 @@
 #include "../../../core/header.h"
 #include "../../../core/phase.h"
 
+#include "../../../core/MOScoreCriterionTypes/basicParetoFrontMOScoreCriterion.h"
+#include "../../../core/MOScoreCriterionTypes/lexicographicMOScoreCriterion.h"
+#include "../../../core/MOScoreCriterionTypes/dynamicLexMOScoreCriterion.h"
+
 #include "../../../misc/MersenneTwister.h"
 
+#include "../../../libs/fileLock.h"
 #include "../../../libs/funcLibrary.h"
 
 #include "../JFOAgent.h"
@@ -75,6 +80,8 @@ class JFOResolutorPhase : public phase
          been triggered.
       */
       unsigned numberOfIterations;
+
+      unsigned maxTimeWindowViolations;
 
    protected:
       /**
@@ -135,6 +142,8 @@ JFOResolutorPhase::JFOResolutorPhase()
    movementTry.resize(4, 0);
    this->numberOfIterations = 0;
    this->ownScore = 0;
+   
+   this->maxTimeWindowViolations = 100;
 }
 
 JFOResolutorPhase::JFOResolutorPhase(JFOParameters* c1, JFOParameters* c2, JFOParameters* c3, JFOParameters* c4)
@@ -148,6 +157,7 @@ JFOResolutorPhase::JFOResolutorPhase(JFOParameters* c1, JFOParameters* c2, JFOPa
    this->c4 = c4;
    this->numberOfIterations = 0;
    this->ownScore = 0;
+   this->maxTimeWindowViolations = 100;
 }
 
 // Sub-Phases
@@ -165,18 +175,79 @@ void JFOResolutorPhase::prePhase(agent* currentAgent, std::vector<agent*>* team)
       superFrog->setBestOwnSolution(superFrog->getCurrentSolution());
 }
 
+
 multiObjectiveSolution* JFOResolutorPhase::getAttractorFromInBox(agent* currentAgent)
 {
-   // We'll loop over the mailbox looking for a solution to mix our current one with.
+   codeaParameters* neuralItem = codeaParameters::instance();
+   // We'll loop over the mailbox looking for a solution to mix our current one with.
+
+   // In case the mailBox is empty, we will rapidly exit
+   if (currentAgent->getInBox().size() == 0)
+      return NULL;
+
+   const multiObjectiveProblem* const MOP = currentAgent->getCore()->getProblem();
    JFOAgent* superFrog = static_cast<JFOAgent*>(currentAgent->getCore());
+
+   // Criterion to rank the solution from the inbox
+
+   // Reseting parameters
    multiObjectiveSolution* incomingSolution = NULL;
    this->attractor = NULL;
-   for (size_t i = 0; i < currentAgent->getInBox().size(); i++)
+
+
+   abstractMOScoreCriterion* scoreCriterion; 
+   unsigned rankingType = neuralItem->rankingScheme;
+   if (neuralItem->rankingScheme == 0) // Pareto
    {
-      incomingSolution = boost::any_cast<multiObjectiveSolution*> ((currentAgent->getInBox())[i][1].getObject());
-      if (this->attractor == NULL || superFrog->getProblem()->firstSolutionIsBetter(incomingSolution, attractor).isNullTrue())
-         this->attractor = incomingSolution;
-   } 
+      //std::cout << "Pareto" << std::endl;
+      basicParetoFrontMOScoreCriterion scoreCriterion;
+
+      for (size_t i = 0; i < currentAgent->getInBox().size(); i++)
+      {
+         incomingSolution = boost::any_cast<multiObjectiveSolution*> ((currentAgent->getInBox())[i][1].getObject());
+
+         if (this->attractor == NULL || (scoreCriterion.firstSolutionIsBetter(incomingSolution, this->attractor, MOP->getProblems()).isTrue()), "kkj")
+            this->attractor = incomingSolution;
+      }
+
+   }
+   else if (neuralItem->rankingScheme == 1) // Lex
+   {
+      //std::cout << "Lex" << std::endl;
+      lexicographicMOScoreCriterion scoreCriterion;   
+
+      for (size_t i = 0; i < currentAgent->getInBox().size(); i++)
+      {
+         incomingSolution = boost::any_cast<multiObjectiveSolution*> ((currentAgent->getInBox())[i][1].getObject());
+
+         if (this->attractor == NULL || (scoreCriterion.firstSolutionIsBetter(incomingSolution, this->attractor, MOP->getProblems()).isTrue()), "kkj")
+            this->attractor = incomingSolution;
+      }
+
+   }
+   else if (neuralItem->rankingScheme == 2) // DynLex
+   {
+      //std::cout << "Dynlex " << std::endl;
+      dynamicLexMOScoreCriterion scoreCriterion(superFrog->getCurrentSolution()->getNumberOfObjectives());
+
+      for (size_t i = 0; i < currentAgent->getInBox().size(); i++)
+      {
+         incomingSolution = boost::any_cast<multiObjectiveSolution*> ((currentAgent->getInBox())[i][1].getObject());
+
+         if (this->attractor == NULL || (scoreCriterion.firstSolutionIsBetter(incomingSolution, this->attractor, MOP->getProblems()).isTrue()), "kkj")
+            this->attractor = incomingSolution;
+      }
+
+   }
+   else
+   {
+      std::cout << "Ranking scheme not known" << std::endl;
+      exit(1);
+   }
+
+
+
+ 
    return this->attractor;
 }
 
@@ -184,13 +255,11 @@ void JFOResolutorPhase::core(agent* currentAgent, std::vector<agent*>* team)
 {
    JFOAgent* superFrog = static_cast<JFOAgent*>(currentAgent->getCore());
 
-   // Update of the weights of the swarm
-   superFrog->updateParameters(this->numberOfIterations);
-
+   const multiObjectiveProblem* const MOP = currentAgent->getCore()->getProblem();
    codeaParameters* neuralItem = codeaParameters::instance();
-   MTRand ranGenerator;
-   double randomNumber = -1.0;
-
+   double randomNumber = neuralItem->getRandomNumber()->rand();
+   unsigned movementType = -1;
+   std::string target = "";
 
    // Current Position
    multiObjectiveSolution* xi = superFrog->getCurrentSolution();
@@ -201,28 +270,13 @@ void JFOResolutorPhase::core(agent* currentAgent, std::vector<agent*>* team)
    // Best Position found by its neighborhood in the current interation
    multiObjectiveSolution* gi = NULL;
 
-   // Debug purposes only
-   /*
-   std::cout << "xi:" << xi->toString() << std::endl;
-   std::cout << "bi:" << bi->toString() << std::endl;
-   if (gi != NULL)
-      std::cout << "gi:" << gi->toString() << std::endl;
-   if (g != NULL)
-      std::cout << "g:"  <<  g->toString() << std::endl;
-   */
+   //if (currentAgent->getId() == 0)
+   //   std::cout << this->numberOfIterations << g->toString() << std::endl;
 
    // Next Position
    multiObjectiveSolution* ni(xi);
- 
 
-   std::string target = "";
-
-   if (currentAgent->getId() == 0 && this->numberOfIterations == 0)
-      std::cout << this->numberOfIterations << ";" << g->toString() << std::endl;
-
-   const multiObjectiveProblem* const MOP = currentAgent->getCore()->getProblem();   unsigned movementType = -1;
-
-   randomNumber = neuralItem->getRandomNumber()->rand();
+   // Type of movements
    if (isInside(randomNumber, 0.0, *c1)) // inertia
    {
       superFrog->inertialMovement(xi, ni, target);
@@ -232,6 +286,7 @@ void JFOResolutorPhase::core(agent* currentAgent, std::vector<agent*>* team)
    else if (isInside(randomNumber, *c1, *c1 + *c2)) // cognitive
    {
       gi = JFOResolutorPhase::getAttractorFromInBox(currentAgent);
+
       if (gi != NULL && gi != bi)
       {
          superFrog->cognitiveMovement(xi, gi, ni);
@@ -275,37 +330,51 @@ void JFOResolutorPhase::core(agent* currentAgent, std::vector<agent*>* team)
          movementTry[movementType] += 1;
       }
    }
-   superFrog->localSearchMethod(ni, target);
-   superFrog->getProblem()->evaluate(ni);
 
-   // Update of solutions
-   if (MOP->firstSolutionIsBetter(ni, bi).isNullTrue())
+   // Update of the current solution
+
+   superFrog->localSearchMethod(ni, target);
+   //std::cout << "---------" << std::endl;
+   //std::cout << "ni: " << ni->toString() << std::endl; 
+   //std::cout << "---------" << std::endl;
+   superFrog->getProblem()->evaluate(ni);
+   superFrog->setCurrentSolution(ni);
+   
+   if (MOP->firstSolutionIsBetter(ni, bi, "reset").isTrue())
    {
       movementScore[movementType] += 1;
+
       superFrog->setBestOwnSolution(ni);
       this->ownScore++;
-      
-      if (MOP->firstSolutionIsBetter(ni, g, "<global>").isNullTrue())
-      {
-         this->ownScore++;
+      // std::cout << this->numberOfIterations << " " << bi->toString() << std::endl;
+   }
+
+      // lexicographicMOScoreCriterion lx;
+
+   if ((MOP->firstSolutionIsBetter(ni, g, "reset").isTrue()))
+   {
+         this->ownScore++;		
          superFrog->updateBestSolution(ni);
          movementScore[movementType] += 1;
          
+
+         // This is for showing results in real time
+         //std::string outPutFile = "./outputs/test.out";
+         //if (!tryWRString(ni->toString(), outPutFile))
+         //   std::cout << "Error Writing : " << outPutFile << std::endl;
+
+         //std::cout << this->numberOfIterations << " " << g->toString() << std::endl;
+
          // Let's output something
          // std::cout << "Score: " << movementScore << std::endl;
          // std::cout << "Tries: " << movementTry << std::endl;
-         std::cout << g->toString() << std::endl;
-
-         // Let's force CODEA to find the optimum
-         if (g->getObjective(5) == 0 && g->getObjective(6) == 0)
-         {
-            std::cout << "Itaration: " << this->numberOfIterations << std::endl;
-            exit(0);
-         }
-      }
+         // std::cout << g->toString() << std::endl;
+                     
+         std::cout << this->numberOfIterations << " " << g->toString() << std::endl;
    }
-
-   superFrog->setCurrentSolution(ni);
+   // Statistical purposes
+   std::cout << this->numberOfIterations << " " << ni->toString() << std::endl;
+   
 }
 
 void JFOResolutorPhase::postPhase(agent* currentAgent, std::vector<agent*>* team)

@@ -6,35 +6,77 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <fstream>
+
+#include <QTimer>
 
 #include "paintable.h"
 
+#include "../libs/fileLock.h"
+
 class VRPSolDisplayer :  public paintable
 {
+
    private:
        routesType routes;
+       QTimer* timer;
 
    protected:
+
+   public slots:
+        void run()
+        { 
+           unsigned costumer;
+           std::string fileName = "final";
+           routesType auxRoutes;
+           int fd = getLock(fileName);
+           if (fd >= 0)
+           {
+              std::fstream file;
+              file.open(fileName.c_str());
+
+              if (!file.is_open())	
+                 return;
+              routes.clear();
+              // This is to get rid of the objectives part of the solution
+              std::string dummy;
+              //for (unsigned i = 1; i < 10; i++)
+              //   file >> dummy; 
+              // <-
+              while (file >> costumer)
+                 routes.push_back(costumer);
+
+              freeLock(fileName, fd);
+              file.close();
+           }
+           paint();
+            
+        };
+
 
    public:
        VRPSolDisplayer();
        ~VRPSolDisplayer();
        void setRoutes(const routesType& routes) { this->routes = routes; }
        void paint();
+
+
 };
 
 VRPSolDisplayer::VRPSolDisplayer()
-{ }
+{ 
+
+}
 
 VRPSolDisplayer::~VRPSolDisplayer()
 { }
 
+//void VRPSolDisplayer::dummy() { paint(); }
+
 inline void VRPSolDisplayer::paint()
 {
-   if (blocked)
-      return;
-
    clearScene();
+   //std::cout << "R.size(): " << routes.size() << std::endl;
 
    VRPTWDataProblem* VRPTWData = VRPTWDataProblem::instance();
 

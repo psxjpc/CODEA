@@ -6,8 +6,9 @@
    @author Group of Intelligent Computing - Universidad de La Laguna - 2008
 */
 
-#ifndef ELAPSEDTIMEPROBLEM_H_
-#define ELAPSEDTIMEPROBLEM_H_
+
+#ifndef ELAPSEDTIMEPROBLEM_H
+#define ELAPSEDTIMEPROBLEM_H
 
 #include "../VRPSolution.h"
 #include "../../../core/header.h"
@@ -31,7 +32,7 @@ class elapsedTimeProblem : public singleObjectiveProblem
          @param const unsgined is the id of the first costumer.
          @param const unsigned is the id of the second costumer. 
       */
-      void elapsedTimeBetweenTwoCostumers(T&, const unsigned, const unsigned);
+      void elapsedTimeBetweenTwoCostumers(T&, const unsigned, const unsigned) const;
 
    public:
       /**
@@ -52,7 +53,7 @@ class elapsedTimeProblem : public singleObjectiveProblem
          @return the value of the objective after the
          evaluation.
       */
-      T evaluate(multiObjectiveSolution*);
+      T evaluate(multiObjectiveSolution*) const;
 
       /**
          Method that return the evaluation of the given 
@@ -62,7 +63,7 @@ class elapsedTimeProblem : public singleObjectiveProblem
          @return the value of the objective after the
          evaluation.
       */
-      T evaluate(const routesType& routes);
+      T evaluate(const routesType& routes) const;
 
       /**
          Method that return the evaluation of the given 
@@ -76,7 +77,9 @@ class elapsedTimeProblem : public singleObjectiveProblem
          @return the value of the objective after the
          evaluation.
       */     
-      T evaluate(const routesType&, const unsigned, const unsigned);
+      T evaluate(const routesType&, const unsigned, const unsigned) const;
+   
+      T evaluate(const boost::any&) const;
 
 };
 
@@ -86,7 +89,7 @@ elapsedTimeProblem::elapsedTimeProblem()
 elapsedTimeProblem::~elapsedTimeProblem()
 { }
 
-inline void elapsedTimeProblem::elapsedTimeBetweenTwoCostumers(T& totalElapsedTime, const unsigned i, const unsigned j)
+inline void elapsedTimeProblem::elapsedTimeBetweenTwoCostumers(T& totalElapsedTime, const unsigned i, const unsigned j) const
 {
    VRPTWDataProblem* VRPTWData = VRPTWDataProblem::instance();
 
@@ -105,7 +108,7 @@ inline void elapsedTimeProblem::elapsedTimeBetweenTwoCostumers(T& totalElapsedTi
 }
 
 
-inline T elapsedTimeProblem::evaluate(multiObjectiveSolution* currentSolution)
+inline T elapsedTimeProblem::evaluate(multiObjectiveSolution* currentSolution) const
 {
    // std::cout << "ElapsedTimeProblem" << std::endl;
 
@@ -133,7 +136,7 @@ inline T elapsedTimeProblem::evaluate(multiObjectiveSolution* currentSolution)
    return totalElapsedTime;
 }
 
-inline T elapsedTimeProblem::evaluate(const routesType& routes)
+inline T elapsedTimeProblem::evaluate(const routesType& routes) const 
 {
    T totalElapsedTime = 0;
    T routeElapsedTime = 0;
@@ -146,12 +149,11 @@ inline T elapsedTimeProblem::evaluate(const routesType& routes)
       }
       elapsedTimeBetweenTwoCostumers(routeElapsedTime, routes[i], routes[i + 1]);
    }
-   totalElapsedTime += routeElapsedTime;
-
+   totalElapsedTime += routeElapsedTime;
    return totalElapsedTime;
 }
 
-inline T elapsedTimeProblem::evaluate(const routesType& routes, const unsigned position, const unsigned costumer)
+inline T elapsedTimeProblem::evaluate(const routesType& routes, const unsigned position, const unsigned costumer) const
 {
    T totalElapsedTime = 0;
    T routeElapsedTime = 0;
@@ -191,5 +193,11 @@ inline T elapsedTimeProblem::evaluate(const routesType& routes, const unsigned p
    totalElapsedTime += routeElapsedTime;
    return totalElapsedTime;
 }
+
+T elapsedTimeProblem::evaluate(const boost::any& anyRoute) const
+{
+   return evaluate(boost::any_cast<const routesType&> (anyRoute));
+}
+
 
 #endif

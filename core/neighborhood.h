@@ -87,8 +87,7 @@ class neighborhood
          supposed to destroy the memory in which the agents reside,
          but is ssystem that should perform this operation.
       */
-      ~neighborhood() 
-      { delete(this->agents); }
+      ~neighborhood() { };
 
 
       /** 
@@ -124,11 +123,9 @@ std::vector<agent*>* const neighborhood::getAgents() const
    return this->agents;
 }
 
-void neighborhood::setAgents(std::vector<agent*>* neighbours)
+void neighborhood::setAgents(std::vector<agent*>* agents)
 {
-    this->agents = new std::vector<agent*>;
-    for (size_t i = 0; i < neighbours->size(); i++)
-        this->agents->push_back((*neighbours)[i]);
+   this->agents = agents;
 }
 
 void neighborhood::addRecipient(agent* newAgent)

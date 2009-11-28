@@ -56,9 +56,9 @@ class staticNeighborhood : public neighborhood
       vector<agent*>* const list() const;
 };
 
-staticNeighborhood::staticNeighborhood(vector<agent*>* neighbours)
+staticNeighborhood::staticNeighborhood(vector<agent*>* agents)
 {
-   this->setAgents(neighbours);
+   this->setAgents(agents);
 }
 
 vector<agent*>* const staticNeighborhood::list() const

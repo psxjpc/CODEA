@@ -25,11 +25,14 @@
 #include "./problems/VRPTW/objectives/vehicleCapacityViolationProblem.h"
 #include "./problems/VRPTW/objectives/vehicleCapacitynViolationsProblem.h"
 #include "./problems/VRPTW/objectives/waitingTimeProblem.h"
+// Experimental
+#include "./problems/VRPTW/objectives/timeWindowsDistribution.h"
 
 
 // Multi-objective Score Criterion
 #include "./core/MOScoreCriterionTypes/aggregationMOScoreCriterion.h"
 #include "./core/MOScoreCriterionTypes/basicParetoFrontMOScoreCriterion.h"
+#include "./core/MOScoreCriterionTypes/dynamicLexMOScoreCriterion.h"
 
 // Neighborhood
 #include "./core/neighborhoodTypes/staticNeighborhood.h"
@@ -47,33 +50,81 @@
 #include "JFOVRPAgent.h"
 
 // Phases
-#include "./agents/JFOAgent/JFOphases/JFOCommunicationPhase.h"
-#include "./agents/JFOAgent/JFOphases/JFOResolutorPhase.h"
+#include "./agents/JFO/JFOphases/JFOCommunicationPhase.h"
+#include "./agents/JFO/JFOphases/JFOResolutorPhase.h"
 
-// Extra 
-#include "./misc/file.h"
-#include "./misc/chrono.h"
 
 using namespace std;
 
-void readTimeMatrix(const char* fileName)
+void readCordeauDataFile(const char* fileName)
 {
-    VRPTWDataProblem* VRPTWData = VRPTWDataProblem::instance();
-    file<long> fileIn(fileName);
-    VRPTWData->setTimeMatrix(fileIn.getMatrix());
-}
+   std::fstream file;
+   file.open(fileName);
+   std::string line;
+   unsigned numberOfLine = 1;
+   std::vector<string> splittedLine;
 
-void readDistanceMatrix(const char* fileName)
-{
-    VRPTWDataProblem* VRPTWData = VRPTWDataProblem::instance();
-    file<double> fileIn(fileName);
-    VRPTWData->setDistanceMatrix(fileIn.getMatrix());
+   VRPTWDataProblem* VRPTWData = VRPTWDataProblem::instance();
+
+   // Cordeau's benchmark problems have the same format. So this algorithm extract
+   //   its data and stores it into an VRPTW->class data structure. 
+   unsigned sizeOfFleet = 0;
+   while (getline(file, line))
+   {
+     splittedLine.clear();
+     splitString(line, splittedLine);
+
+     if (numberOfLine == 1)
+        sizeOfFleet = fromStringTo<unsigned>(splittedLine[1]);
+
+     else if (numberOfLine == 2)
+     {
+        vehicleType vehicle(sizeOfFleet, fromStringTo<capacityType>(splittedLine[1]));
+        VRPTWData->insertVehicle(vehicle);
+     }
+     else if (numberOfLine >= 3)
+     {
+        // The first column is the id of the costumer (we won't use it)
+        // *
+
+        // The second and the third columns are the coordinates
+        pointType clientPosition(fromStringTo<XCoordType>(splittedLine[1]), fromStringTo<YCoordType>(splittedLine[2]));
+        VRPTWData->insertCoord(clientPosition);
+
+        // The third column represents the service time
+        timeType clientServiceTime = fromStringTo<timeType>(splittedLine[3]);
+        VRPTWData->insertServiceTime(clientServiceTime);
+
+        // The fourth column is the amount of demand
+        singleDemandType clientDemand = fromStringTo<singleDemandType>(splittedLine[4]);
+        VRPTWData->insertDemand(clientDemand);
+
+        // The fith and sith column are the time window
+        // The thrid line has a column less than the rest. 
+        if (numberOfLine == 3)   
+        {
+           singleTimeWindowType clientTimeWindow(fromStringTo<timeType>(splittedLine[7]), fromStringTo<timeType>(splittedLine[8]));
+           VRPTWData->insertTimeWindow(clientTimeWindow);
+        }
+        else 
+        {
+           singleTimeWindowType clientTimeWindow(fromStringTo<timeType>(splittedLine[8]), fromStringTo<timeType>(splittedLine[9]));
+           VRPTWData->insertTimeWindow(clientTimeWindow);
+        }
+
+       
+
+     }
+     numberOfLine++;
+   }
+   // VRPTWData->print();
+   // exit(0);
 }
 
 void readSolomonDataFile(const char* fileName)
 {
-   std::fstream fileIn;
-   fileIn.open(fileName);
+   std::fstream file;
+   file.open(fileName);
    std::string line;
    unsigned numberOfLine = 1;
    std::vector<string> splittedLine;
@@ -82,7 +133,7 @@ void readSolomonDataFile(const char* fileName)
 
    // Solomon's benchmark problems have the same format. So this algorithm extract
    //   its data and stores it into an VRPTW->class data structure. 
-   while (getline(fileIn, line))
+   while (getline(file, line))
    {
      if (numberOfLine == 5)
      {
@@ -114,44 +165,65 @@ void readSolomonDataFile(const char* fileName)
 
 int main( int argc, char **argv )
 {
-   // cout << "CODEA - MOJFO 4 VRPTW" << endl;
-   // cout << "---------------------" << endl;
+   //cout << "CODEA - MOJFO 4 VRPTW" << endl;
+   //cout << "---------------------" << endl;
 
-   if (argc < 4)
+   if (argc < 5)
    {
       cout << "ERROR[!]" << endl;
       cout << "You must provide:" << endl;
       cout << "  - a filename with the data of the problem." << endl;
       cout << "  - the number of vehicles you want to work with." << endl;
-      cout << "  - type of topology (0) Star (1) Ring (2) K-random" << endl;
-      cout << "Example ./CODEA2 data.txt 10 2" << endl;
+      cout << "  - the number of agents within the swarm." << endl;
+      cout << "  - the number of evolutions. " << endl;
+      cout << "  - the ranking type: 0 Pareto, 1 Lexicographic, 2 Dynamic lexicographic. " << endl;
+      cout << "  - seed." << endl;
+      cout << "Example ./CODEA2 data.txt 10 50 5000 0 200" << endl;
       exit(1);
    }
-   assert(atoi(argv[3]) >= 0 && atoi(argv[3]) < 4);
-   // cout << "Starting up..." << endl;
+   //cout << "Starting up..." << endl;
+
+   // Variables
+   char* fileName = argv[1];
+   unsigned numberOfVehicles = atoi(argv[2]);
+   unsigned numberOfAgents = atoi(argv[3]);
+   unsigned numberOfEvolutions = atoi(argv[4]);
+   unsigned rankingType = atoi(argv[5]);
+   unsigned seed = atoi(argv[6]);
+
+
+   
 
    // Seed
-   srand(time(NULL));
-   MTRand randomNumber(time(NULL));
+   //srand(time(NULL));
+   //MTRand randomNumber(time(NULL));
+
+   srand(seed);
+   MTRand randomNumber(seed);
 
    // Get data from files
-   readSolomonDataFile(argv[1]);
-   unsigned numberOfVehicles = atoi(argv[2]);
+   // readSolomonDataFile(fileName);
+   readCordeauDataFile(fileName);
+
    VRPTWDataProblem* VRPTWData = VRPTWDataProblem::instance();
    VRPTWData->calculateDistanceMatrix();
-   VRPTWData->setDistanceMatrix(VRPTWData->getDistanceMatrix());
+
+   // @Experimental: This is a new approach to add a new objective that takcles the tw violations in a different way
+   //VRPTWData->createZones(numberOfVehicles);
+
 
    // Creation of the agents  
-   unsigned numberOfAgents = 50;
+
    deque<message> inBox;
    vector<agent*> frogAgents;
 
    // All the agents will point to the best social solution
    multiObjectiveSolution* bestMOSolution = new VRPSolution(VRPTWData->getClientCoords().size());
-
-
    codeaParameters* neuralItem = codeaParameters::instance();  
    neuralItem->setRandomNumber(&randomNumber);
+
+   // Ranking scheme
+   neuralItem->rankingScheme = rankingType; 
 
 
    for (unsigned i = 0; i < numberOfAgents; i++)
@@ -173,6 +245,19 @@ int main( int argc, char **argv )
       singleObjectiveProblem* timeWindownProblem = new timeWindownViolationProblem;
       singleObjectiveProblem* vehicleCapacityProblem = new vehicleCapacityViolationProblem;
       singleObjectiveProblem* vehicleCapacitynProblem = new vehicleCapacitynViolationsProblem;
+      //singleObjectiveProblem* timeWindowsDistributionProblem = new timeWindowsDistribution;
+      
+      // Setting priorities
+      vehiclesProblem->setPriority(3);
+      elapsedProblem->setPriority(4);
+      waitingProblem->setPriority(2);
+      distancesProblem->setPriority(1);
+      timeWindowProblem->setPriority(5);
+      timeWindownProblem->setPriority(0);
+      vehicleCapacityProblem->setPriority(6); 
+      vehicleCapacitynProblem->setPriority(7);
+      //timeWindowsDistributionProblem->setPriority(0);
+
 
       // By default they are set to false [Agents]
       vehiclesProblem->setIsComparable(true);
@@ -181,18 +266,19 @@ int main( int argc, char **argv )
       timeWindownProblem->setIsComparable(true);
       //waitingProblem->setIsComparable(true);
       //elapsedProblem->setIsComparable(true);
+      //timeWindowsDistributionProblem->setIsComparable(true);
 
       // By default they are set to false [Global]
       vehiclesProblem->setIsGlobalComparable(true);
       distancesProblem->setIsGlobalComparable(true);
-      vehicleCapacityProblem->setIsGlobalComparable(true);
+      //vehicleCapacityProblem->setIsGlobalComparable(true);
       timeWindownProblem->setIsGlobalComparable(true);
       //waitingProblem->setIsGlobalComparable(true);
       //elapsedProblem->setIsGlobalComparable(true);  
+      //timeWindowsDistributionProblem->setIsGlobalComparable(true);
 
       // Problem 
       multiObjectiveProblem* MOVRPTW = new multiObjectiveProblem;
-      MOVRPTW->setMOScoreCriterion(new basicParetoFrontMOScoreCriterion());
       MOVRPTW->addProblem(vehiclesProblem);
       MOVRPTW->addProblem(elapsedProblem);
       MOVRPTW->addProblem(waitingProblem);
@@ -201,12 +287,18 @@ int main( int argc, char **argv )
       MOVRPTW->addProblem(timeWindownProblem);
       MOVRPTW->addProblem(vehicleCapacityProblem);
       MOVRPTW->addProblem(vehicleCapacitynProblem);
+      //MOVRPTW->addProblem(timeWindowsDistributionProblem);
+      //MOVRPTW->setMOScoreCriterion(new dynamicLexMOScoreCriterion(MOVRPTW->getProblems().size()));
+      MOVRPTW->setMOScoreCriterion(new basicParetoFrontMOScoreCriterion());
 
       // Agent's Core
       JFOAgent* frog = new JFOVRPAgent();
       frog->setProblem(MOVRPTW);
       frog->initializeParameters();
       superFrog->setCore(frog);
+
+
+
 
       // Solution
       multiObjectiveSolution* MOVRPTWSol = new VRPSolution(VRPTWData->getClientCoords().size());
@@ -218,9 +310,8 @@ int main( int argc, char **argv )
       // Note: It's very important how we add the phases. Because they'll be
       //       executed in the same order.
       vector<phase*> phases;
-      phases.push_back(new JFOResolutorPhase(frog->getPointerToC1(), frog->getPointerToC2(), frog->getPointerToC3(), frog->getPointerToC4()));
       phases.push_back(new JFOCommunicationPhase());
-      // phases.push_back(new JFOResolutorPhase(frog->getPointerToC1(), frog->getPointerToC2(), frog->getPointerToC3(), frog->getPointerToC4()));
+      phases.push_back(new JFOResolutorPhase(frog->getPointerToC1(), frog->getPointerToC2(), frog->getPointerToC3(), frog->getPointerToC4()));
       superFrog->setPhases(phases);
 
       // Addition of this agent to the system
@@ -228,69 +319,16 @@ int main( int argc, char **argv )
    }
 
    // Neighborhood
-
-   
-   if (atoi(argv[3]) == 0)
-   {
-      // Star topology (All to all topology)
-      for (size_t i = 0; i < frogAgents.size(); i++)
-         frogAgents[i]->setNeighborhood(new staticNeighborhood(&frogAgents));
-   }
-   else if (atoi(argv[3]) == 1)
-   {
-      // Ring topology (An agent Ai, sends its information to Ai-1 and Ai+1)
-      vector<agent*> neighbours;
-      for (size_t i = 0; i < frogAgents.size(); i++)
-      {
-         unsigned id1 = (int(i - 1) < 0)? frogAgents.size() - 1 : (i - 1);
-         unsigned id2 = (i + 1) > (frogAgents.size() - 1)? 0 : (i + 1);
-         neighbours.push_back(  (frogAgents[id1])  );
-         neighbours.push_back(  (frogAgents[id2])  );
-         frogAgents[i]->setNeighborhood(new staticNeighborhood(&neighbours));
-         neighbours.clear();
-      }
-   }
-   else if (atoi(argv[3]) == 2)
-   {
-      // K-random topology (An agent Ai, sends its information to k random agents
-      for (size_t j = 0; j < frogAgents.size(); j++)
-      {
-         unsigned k = 1 + neuralItem->getRandomNumber()->randInt(frogAgents.size() - 2);
-         vector<unsigned> ids;
-         unsigned candidate;
-         while (ids.size() < k)
-         {
-            candidate = neuralItem->getRandomNumber()->randInt(frogAgents.size() - 1);
-            if (find(ids.begin(), ids.end(), candidate) == ids.end())
-               ids.push_back(candidate);
-         }
-         cout << "Agent: " << j << "ids: " << ids << endl;
-         vector<agent*> neighbours;
-         for (size_t i = 0; i < k; i++)
-             neighbours.push_back(frogAgents[ids[i]]);
-
-         frogAgents[j]->setNeighborhood(new staticNeighborhood(&neighbours));
-      }
-   }
-   else if (atoi(argv[3]) == 3)
-      for (size_t i = 0; i < frogAgents.size(); i++)
-         frogAgents[i]->setNeighborhood(NULL);
-
-   // Here we will set the best solution of the whole swarm using stric pareto dominace
-   multiObjectiveSolution* genericSolution = new VRPSolution();
-   genericSolution->copy(frogAgents[0]->getCore()->getCurrentSolution());
-   const multiObjectiveProblem* const MOP = frogAgents[0]->getCore()->getProblem();
-
-   for (size_t i = 1; i < frogAgents.size(); i++)
-      if (MOP->firstSolutionIsBetter(frogAgents[i]->getCore()->getCurrentSolution(), genericSolution).isTrue())
-         genericSolution->copy(frogAgents[i]->getCore()->getCurrentSolution());
-
-   neuralItem->setGenericSolution(genericSolution);
+   for (size_t i = 0; i < frogAgents.size(); i++)
+      frogAgents[i]->setNeighborhood(new staticNeighborhood(&frogAgents));
+     
+   // WARNING: If the agent zero does not contains the problem, this will crash
+   neuralItem->setProblems(&(frogAgents[0]->getCore()->getProblem()->getProblems())); 
 
 
    // Iterations of the system
    systemGeneralStopCriterion* haltCriterion = new systemGeneralStopCriterion();
-   haltCriterion->setMaxIteration(5000);
+   haltCriterion->setMaxIteration(2000); 
 
 
    // Creation of the system
@@ -298,11 +336,8 @@ int main( int argc, char **argv )
    CODEA.setAgents(frogAgents);
    CODEA.setNumberOfPhases(2);
    CODEA.setStopCriterion(haltCriterion);
-
-   // Right before starting CODEA, we start the chrono
-   chrono* myChrono = chrono::instance();
    CODEA.start();  
-   // cout << "End!" << endl;
+   cerr << "End!" << endl;
 
 
    return 0;

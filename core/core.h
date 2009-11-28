@@ -24,12 +24,6 @@ class core
 {
    private:
       /**
-         Best solution in the whole system. This pointer should be shared by all
-         the agents.
-      */
-      multiObjectiveSolution* bestSolutionInSystem;
-
-      /**
          Agent's best solution. This is the best solution found by the agent up time.         
       */
       multiObjectiveSolution* bestSolution;
@@ -79,12 +73,6 @@ class core
       ~core();
 
       /** 
-         Method that returns the best solution of the system.
-         @return a pointer to agent's best solution achieved.
-      */
-      multiObjectiveSolution* getBestSolutionInSystem() const;
-
-      /**
          Method that returns the agent's best solution.
          @return a pointer to agent's best solution achieved.
       */
@@ -126,13 +114,6 @@ class core
       */
       double getElapsedTimeOfBestSolution() const;
 
-
-      /**
-         Method that sets the agent's best solution.
-         @param multiObjectiveSolution* is a pointer to the best solution.
-      */
-      void setBestSolutionInSystem(multiObjectiveSolution*);
-
       /** 
          Method that sets the agent's best solution.
          @param multiObjectiveSolution* is a pointer to the best solution.
@@ -140,14 +121,6 @@ class core
       void setBestSolution(multiObjectiveSolution*);
 
       /** 
-         Method that update the best solution in the system.
-         @param multiObjectiveSolution* is a pointer to the best solution.
-         @warning  This method updates the params of this solution and not the
-                   pointer. We are going to use the copy method.
-      */
-      void updateBestSolutionInSystem(multiObjectiveSolution*);
-
-      /**
          Method that update the agent's best solution.
          @param multiObjectiveSolution* is a pointer to the best solution.
          @warning  This method updates the params of this solution and not the
@@ -213,13 +186,11 @@ class core
       /** 
          Method that resets the lifetime counter of the agent.
       */
-      void resetElapsedTime();
-
+      void resetElapsedTime();
 };
 
 core::core()
 {
-   this->bestSolutionInSystem = NULL;
    this->bestSolution = NULL;
    this->currentSolution = NULL;
    this->currentProblem = NULL;
@@ -262,11 +233,6 @@ inline void core::setElapsedTime(const double time)
 inline void core::setElapsedTimeOfBestSolution(const double time)
 {
    this->elapsedTimeOfBestSolution = time;
-}
-
-inline multiObjectiveSolution* core::getBestSolutionInSystem() const
-{
-   return this->bestSolutionInSystem;
 }
 
 inline multiObjectiveSolution* core::getBestSolution() const
@@ -321,30 +287,12 @@ inline void core::updateCurrentSolution(multiObjectiveSolution* newSolution)
    this->currentSolution->copy(newSolution);
 }
 
-inline void core::setBestSolutionInSystem(multiObjectiveSolution* newSolution)
-{
-   // We won't allow the bestSolution to point to NULL
-   assert(newSolution != NULL);
-   this->bestSolutionInSystem = newSolution;
-}
-
 inline void core::setBestSolution(multiObjectiveSolution* newSolution)
 {
    // We won't allow the bestSolution to point to NULL
    assert(newSolution != NULL);
    this->bestSolution = newSolution;
 }
-
-// WARNING: This method updates the params of this solution and not the
-//  pointer. We're going to use the copy method.
-inline void core::updateBestSolutionInSystem(multiObjectiveSolution* newSolution)
-{
-   assert(newSolution != NULL);
-   assert(this->bestSolutionInSystem != NULL);
-
-   this->bestSolutionInSystem->copy(newSolution);
-}
-
 
 // WARNING: This method updates the params of this solution and not the
 //  pointer. We're going to use the copy method.

@@ -6,11 +6,12 @@
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QThread>
+#include <QTimer>
 
 
 class paintable : public QMainWindow
 {
-
+   Q_OBJECT
    private:
       // Interface
       QToolBar* zoomingOptions;
@@ -21,11 +22,12 @@ class paintable : public QMainWindow
       QGraphicsView view;
 
       QList<QGraphicsItem *> graphicItems;
+      QTimer* timer;
 
    public slots:
       void zoomIn();
       void zoomOut();
-      virtual void run() { };
+      virtual void run() = 0;
 
    protected:
 

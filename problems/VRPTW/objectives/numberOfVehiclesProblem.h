@@ -41,7 +41,7 @@ class numberOfVehiclesProblem : public singleObjectiveProblem
          @return the value of the objective after the
          evaluation.
       */
-      T evaluate(multiObjectiveSolution*);
+      T evaluate(multiObjectiveSolution*) const;
 
       /**
          Method that return the evaluation of the given 
@@ -51,7 +51,9 @@ class numberOfVehiclesProblem : public singleObjectiveProblem
          @return the value of the objective after the
          evaluation.
       */
-      T evaluate(const routesType& routes);
+      T evaluate(const routesType&) const;
+
+      T evaluate(const boost::any&) const;
 };
 
 numberOfVehiclesProblem::numberOfVehiclesProblem()
@@ -60,7 +62,7 @@ numberOfVehiclesProblem::numberOfVehiclesProblem()
 numberOfVehiclesProblem::~numberOfVehiclesProblem()
 { }
 
-inline T numberOfVehiclesProblem::evaluate(multiObjectiveSolution* currentSolution)
+inline T numberOfVehiclesProblem::evaluate(multiObjectiveSolution* currentSolution) const
 {
    VRPSolution* VRPSol = static_cast<VRPSolution*>(currentSolution);
    T numberOfVehicles = VRPSol->getNumberOfRoutes();
@@ -68,7 +70,7 @@ inline T numberOfVehiclesProblem::evaluate(multiObjectiveSolution* currentSoluti
    return numberOfVehicles;
 }
 
-inline T numberOfVehiclesProblem::evaluate(const routesType& routes)
+inline T numberOfVehiclesProblem::evaluate(const routesType& routes) const
 {
    unsigned numberOfRoutes = 0;
    for (size_t i = 0; i < routes.size(); i++)
@@ -77,6 +79,9 @@ inline T numberOfVehiclesProblem::evaluate(const routesType& routes)
    return (numberOfRoutes - 1);
 }
 
-
+T numberOfVehiclesProblem::evaluate(const boost::any& anyRoute) const
+{
+   return evaluate(boost::any_cast<const routesType&> (anyRoute));
+}
 
 #endif

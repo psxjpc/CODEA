@@ -195,7 +195,7 @@ class JFOAgent : public core
 
       /**
          Virtual method that is intended to implement a local search as it is
-         specified in the JFO Algorithm.
+         specified in(eps + (eps/double(3)) the JFO Algorithm.
       */
       virtual void localSearchMethod(multiObjectiveSolution* currentSolution,
                                      const std::string options = "") = 0;
@@ -245,9 +245,14 @@ inline multiObjectiveSolution* JFOAgent::getBestSolutionOfGroup() const
    return this->bestSolutionOfGroup;
 }
 
+/*
 inline void JFOAgent::updateParameters(unsigned it)
 {
-   this->c1 = 0.35 * sin(2 * PI * it / 50);
+   //this->c1 = 0.90 * ((double)it/(double)2000) * sin((double)it / (double)10); //20 min -> 8 violations
+
+   //this->c1 =  ((double)it / (double)2) * sin((double)1 / (double)10 * (double)PI * (double)it) / (double)it;
+   //this->c1 = (this->c1 < 0)? 0 : this->c1;
+   this->c1 = abs(this->c1);
    double delta = 1 - this->c1;
    
    this->c2 = delta / 3;
@@ -257,7 +262,66 @@ inline void JFOAgent::updateParameters(unsigned it)
    //std::cout << "(sin((2 * PI * it) / 300): " << sin(2 * PI * it / 300) << " (1/4) * K: " << (0.25) * sin(2 * PI * it / 300) << std::endl;
    //std::cout << "PI: " << PI << "PI: " << PI << "PI: " << PI << std::endl;
    //std::cout << "c1: " << c1 << " c2: " << c2 << " c3: " << c3 << " c4: " << c4 << std::endl;
+}*/
+
+
+/*
+inline void JFOAgent::updateParameters(unsigned id)
+{
+   double eps = 0.1;
+
+   //std::cout << "id: " << id << std::endl;
+   if (id == 1)
+      this->c1 += (eps + (eps/double(3)));
+   if (id == 2)
+      this->c2 += (eps + (eps/double(3)));
+   if (id == 3)
+      this->c3 += (eps + (eps/double(3)));
+   if (id == 4)
+      this->c4 += (eps + (eps/double(3)));
+
+   this->c1 = (double)(this->c1 - (eps/double(3)));
+   this->c2 = (double)(this->c2 - (eps/double(3)));
+   this->c3 = (double)(this->c3 - (eps/double(3)));
+   this->c4 = (double)(this->c4 - (eps/double(3)));
+
+   this->c1 = ((this->c1 < 0)? 0 : this->c1);
+   this->c2 = ((this->c2 < 0)? 0 : this->c2);
+   this->c3 = ((this->c3 < 0)? 0 : this->c3);
+   this->c4 = ((this->c4 < 0)? 0 : this->c4);
+   
+   //std::cout << this->c1 << " " << this->c2 << " " << this->c3 << " " << this->c4 << std::endl;
+
+   if (this->c1 >= 1 || this->c2 >= 1 || this->c3 >= 1 || this->c4 >= 1)
+      initializeParameters();  
 }
+*/
+
+inline void JFOAgent::updateParameters(unsigned it)
+{
+   if (this->c1 < 0.01)
+   {
+      this->c2 = 0.33;
+      this->c3 = 0.33;
+      this->c4 = 0.33;
+      return;
+   }
+
+   double itMax = (double)1000;
+   double currentIt = itMax - it;
+   double initialDelta = 0.50;
+   
+   double previousC1 = this->c1;
+
+   this->c1 = initialDelta * currentIt / itMax;
+
+   double delta = previousC1 - this->c1;
+   
+   this->c2 += delta/(double)3;
+   this->c3 += delta/(double)3;
+   this->c4 += delta/(double)3; 
+}
+
 
 inline void JFOAgent::initializeParameters()
 {

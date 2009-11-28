@@ -16,8 +16,7 @@
 
 #include "../misc/MersenneTwister.h"
 
-// This is for the atexit function
-#include <cstdlib>
+#include "header.h"
 
 class codeaParameters
 {
@@ -39,8 +38,12 @@ class codeaParameters
       */
       MTRand* randomNumber;
 
-      multiObjectiveSolution* genericSolution;
+      /**
+         Pointer to the problems the system is taclking
+      */
+      const problemsType* problems;
 
+      
 
    protected:
       
@@ -48,8 +51,7 @@ class codeaParameters
           Default constructor. It does nothing.
           It's protected due to its Singleto nature.
       */
-      codeaParameters() 
-      { genericSolution = NULL; };
+      codeaParameters() { };
 
       /**
           Default destructor. It does nothing.
@@ -78,7 +80,11 @@ class codeaParameters
       */
       MTRand* getRandomNumber() const;
 
-      multiObjectiveSolution* getGenericSolution() const;
+      /**
+          Method that returns the pointer to the multiObjective functions
+          @return problemsType* is the pointer to the problems
+      */
+      const problemsType* getProblems() const;
 
       /**
           Method that sets the randon number generator.
@@ -86,9 +92,14 @@ class codeaParameters
       */
       void setRandomNumber(MTRand*);
 
-      void setGenericSolution(multiObjectiveSolution*);
+      /**
+          Method that sets the pointer to the multiObjective functions
+          @param problemsType* is the pointer to the problems
+      */
+      void setProblems(const problemsType*);
 
-
+      // Temporal
+      unsigned rankingScheme;
 };
  
 void codeaParameters::destroySingleton()
@@ -104,7 +115,9 @@ codeaParameters* codeaParameters::instance()
    if (codeaParametersInstance == NULL)
    {
       codeaParametersInstance = new codeaParameters;
-      atexit(&codeaParameters::destroySingleton);
+      codeaParametersInstance->setProblems(NULL);
+      codeaParametersInstance->setRandomNumber(NULL);
+      std::atexit(&codeaParameters::destroySingleton);
    }
    return codeaParametersInstance;
 }
@@ -114,9 +127,9 @@ MTRand* codeaParameters::getRandomNumber() const
    return this->randomNumber;
 }
 
-multiObjectiveSolution* codeaParameters::getGenericSolution() const
+const problemsType* codeaParameters::getProblems() const 
 {
-   return this->genericSolution;
+   return this->problems;
 }
 
 void codeaParameters::setRandomNumber(MTRand* randomNumber)
@@ -124,11 +137,9 @@ void codeaParameters::setRandomNumber(MTRand* randomNumber)
    this->randomNumber = randomNumber;
 }
 
-void codeaParameters::setGenericSolution(multiObjectiveSolution* genericSolution)
+void codeaParameters::setProblems(const problemsType* problems)  
 {
-   if (this->genericSolution == NULL)
-      this->genericSolution = genericSolution;
-   else
-      this->genericSolution->copy(genericSolution);
+   this->problems = problems;
 }
+
 #endif

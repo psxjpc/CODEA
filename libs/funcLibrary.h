@@ -27,33 +27,6 @@
 
 namespace basic 
 {
-   template <class T>
-   inline unsigned max(const std::vector<T>& v)
-   {
-      unsigned index = 0;
-      T max = 0;
-      for (size_t i = 0; i < v.size(); i++)
-         if (v[i] > max)
-         {
-            max = v[i];
-            index = i;
-         }
-      return index;
-   }
-
-   template <class T>
-   inline unsigned max(const std::vector<T>& v, const std::vector<bool>& b)
-   {
-      unsigned index = 0;
-      T max = 0;
-      for (size_t i = 0; i < v.size(); i++)
-         if ((v[i] > max) && (b[i]))
-         {
-            max = v[i];
-            index = i;
-         }
-      return index;
-   }
 
    /**
       Function that swaps the values of two elemetns.
@@ -81,21 +54,6 @@ namespace basic
       v[i] = v[j];
       v[j] = temp;
    }
-
-   /**
-      Function that swaps the values of two cells in std::vector.
-      @param std::vector<T>& is a reference to the vector that will be affected by the swap.
-      @param const unsigned is the index to a position in the vector.
-      @param const unsigned is the index to a position in the vector.
-   */
-   template <class T>
-   inline void swap(std::vector<T>* v, const unsigned i, const unsigned j)
-   {
-      T temp = (*v)[i];
-      (*v)[i] = (*v)[j];
-      (*v)[j] = temp;
-   }
-
 
    /**
       Function that swaps the positions of two cells in std::vector.

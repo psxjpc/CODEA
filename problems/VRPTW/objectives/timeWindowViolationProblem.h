@@ -30,7 +30,7 @@ class timeWindowViolationProblem : public singleObjectiveProblem
          @param const unsgined is the id of the first costumer.
          @param const unsigned is the id of the second costumer. 
       */
-      void elapsedTimeBetweenTwoCostumers(T&, T&, const unsigned, const unsigned);
+      void elapsedTimeBetweenTwoCostumers(T&, T&, const unsigned, const unsigned) const;
 
 
    public:
@@ -52,7 +52,7 @@ class timeWindowViolationProblem : public singleObjectiveProblem
          @return the value of the objective after the
          evaluation.
       */
-      T evaluate(multiObjectiveSolution*);
+      T evaluate(multiObjectiveSolution*) const;
 
       /**
          Method that return the evaluation of the given 
@@ -61,7 +61,9 @@ class timeWindowViolationProblem : public singleObjectiveProblem
          @return the value of the objective after the
          evaluation.
       */
-      T evaluate(const routesType& routes);
+      T evaluate(const routesType& routes) const;
+
+      T evaluate(const boost::any&) const;
 };
 
 timeWindowViolationProblem::timeWindowViolationProblem()
@@ -70,7 +72,7 @@ timeWindowViolationProblem::timeWindowViolationProblem()
 timeWindowViolationProblem::~timeWindowViolationProblem()
 { }
 
-inline void timeWindowViolationProblem::elapsedTimeBetweenTwoCostumers(T& totalElapsedTime, T& violation, const unsigned i, const unsigned j)
+inline void timeWindowViolationProblem::elapsedTimeBetweenTwoCostumers(T& totalElapsedTime, T& violation, const unsigned i, const unsigned j) const
 {
    VRPTWDataProblem* VRPTWData = VRPTWDataProblem::instance();
 
@@ -95,7 +97,7 @@ inline void timeWindowViolationProblem::elapsedTimeBetweenTwoCostumers(T& totalE
 }
 
 
-inline T timeWindowViolationProblem::evaluate(multiObjectiveSolution* currentSolution)
+inline T timeWindowViolationProblem::evaluate(multiObjectiveSolution* currentSolution) const
 {
    // std::cout << "tineWindowsViolationProblem" << std::endl;
 
@@ -125,7 +127,7 @@ inline T timeWindowViolationProblem::evaluate(multiObjectiveSolution* currentSol
    return (T)violation;
 }
 
-inline T timeWindowViolationProblem::evaluate(const routesType& routes)
+inline T timeWindowViolationProblem::evaluate(const routesType& routes) const
 {
    // std::cout << "tineWindowsViolationProblem" << std::endl;
 
@@ -150,5 +152,9 @@ inline T timeWindowViolationProblem::evaluate(const routesType& routes)
    return (T)violation;
 }
 
+T timeWindowViolationProblem::evaluate(const boost::any& anyRoute) const
+{
+   return evaluate(boost::any_cast<const routesType&> (anyRoute));
+}
 
 #endif
